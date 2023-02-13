@@ -21,16 +21,15 @@ const onUpPosition = new THREE.Vector2();
 const onDownPosition = new THREE.Vector2();
 
 const geometry = new THREE.BoxGeometry( 20, 20, 20 );
-let transformControl;
+let transform_ctrl;
 
 let world;
 let boxes = [];
 // let spheres = [];
+let gripper = [];
 
 const matrix = new THREE.Matrix4();
 const color = new THREE.Color();
-
-// Boxes
 
 await init();
 
@@ -53,7 +52,7 @@ async function init() {
 
     let size = 0.5
     const geometryBox = new THREE.BoxGeometry(size, size, size);
-    for (let i = 0; i < 500; i++) {
+    for (let i = 0; i < 100; i++) {
         let material = new THREE.MeshLambertMaterial();
         let box = new THREE.Mesh(geometryBox, material);
 
@@ -72,6 +71,14 @@ async function init() {
         scene.add(box);
         boxes.push(box);
     }
+
+    let gripperGeometry1 = new THREE.BoxGeometry(0.1, 0.5, 1);
+    let material = new THREE.MeshLambertMaterial();
+    let g = new THREE.Mesh(gripperGeometry1, material);
+    g.position.set(0, 2, 0);
+    g.material.color.setHex(0x555555);
+    gripper.push(g);
+    scene.add(g);
 //==============================================================================
 
 
@@ -117,26 +124,13 @@ async function init() {
     controls.damping = 0.2;
     controls.addEventListener( 'change', render );
 
-    transformControl = new TransformControls( camera, renderer.domElement );
-    // transformControl.addEventListener( 'change', render );
-    // transformControl.addEventListener( 'dragging-changed', function ( event ) {
-    //
-    //     controls.enabled = ! event.value;
-    //
-    // } );
-    // scene.add( transformControl );
-
-
-    // transformControl.addEventListener( 'objectChange', function () {
-    //
-    //     updateSplineOutline();
-    //
-    // } );
-
-    document.addEventListener( 'pointerdown', onPointerDown );
-    document.addEventListener( 'pointerup', onPointerUp );
-    document.addEventListener( 'pointermove', onPointerMove );
-    window.addEventListener( 'resize', onWindowResize );
+    transform_ctrl = new TransformControls(camera, renderer.domElement);
+    transform_ctrl.addEventListener('change', render);
+    transform_ctrl.addEventListener('dragging-changed', function (event) {
+        controls.enabled = ! event.value;
+    });
+    transform_ctrl.attach(g);
+    scene.add(transform_ctrl);
 
 
     renderer.setAnimationLoop(render);
@@ -156,54 +150,11 @@ function render() {
 
     renderer.render(scene, camera);
 
-}[i]
-
-function onPointerDown( event ) {
-
-    onDownPosition.x = event.clientX;
-    onDownPosition.y = event.clientY;
-
-}
-
-function onPointerUp( event ) {
-
-    onUpPosition.x = event.clientX;
-    onUpPosition.y = event.clientY;
-
-    if ( onDownPosition.distanceTo( onUpPosition ) === 0 ) transformControl.detach();
-
-}
-
-function onPointerMove( event ) {
-
-    // pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-    // pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-    //
-    // raycaster.setFromCamera( pointer, camera );
-    //
-    // const intersects = raycaster.intersectObjects( splineHelperObjects, false );
-    //
-    // if ( intersects.length > 0 ) {
-    //
-    //     const object = intersects[ 0 ].object;
-    //
-    //     if ( object !== transformControl.object ) {
-    //
-    //         transformControl.attach( object );
-    //
-    //     }
-    //
-    // }
-
 }
 
 function onWindowResize() {
-
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-
-    renderer.setSize( window.innerWidth, window.innerHeight );
-
+    renderer.setSize(window.innerWidth, window.innerHeight);
     render();
-
 }
