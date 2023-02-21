@@ -62,7 +62,8 @@ function addBox(world, scene, g, m, width, height, depth, x=0, y=0, z=0, color=0
         r: rigid_body,
         c: collider,
         m: mesh,
-        i: mesh.geometry.parameters
+        i: mesh.geometry.parameters,
+        t: "dynamic"
     }
 }
 
@@ -115,7 +116,7 @@ async function init() {
     let arm_w = 0.05;
     let arm_base_w = arm_w*2;
     let arm_base_h = arm_w*3;
-    let shoulder_l = 0.4;
+    let shoulder_l = 0.8;
     let elbow_l = 0.1;
     let forearm_l = 0.4;
     let wrist_l = 0.1;
@@ -133,7 +134,32 @@ async function init() {
     robot.wrist = addBox(world, scene, 0, 1, arm_w, arm_w, wrist_l);
     robot.g1 = addBox(world, scene, 0, 1, 0.01, arm_w, g1_l);
     robot.g2 = addBox(world, scene, 0, 1, 0.01, arm_w, g1_l);
-    robot.g3 = addBox(world, scene, 0, 1, 0.12, arm_w, g3_l);
+
+
+
+
+    // robot.g3 = addBox(world, scene, 0, 1, 0.12, arm_w, g3_l);
+
+    let body_desc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0.5, 1, 0.5);
+    let rigid_body = world.createRigidBody(body_desc);
+    rigid_body.setAdditionalMass(1);
+    rigid_body.setGravityScale(0);
+    let collider = RAPIER.ColliderDesc.cuboid(0.12/2, arm_w/2, g3_l/2);
+    let geometry = new THREE.BoxGeometry(0.12, arm_w, g3_l);
+    let mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x333333}));
+    scene.add(mesh);
+
+    robot.g3 = {
+        r: rigid_body,
+        c: collider,
+        m: mesh,
+        i: mesh.geometry.parameters,
+        t: "position"
+    }
+
+
+
+
 
     parts.push(robot.base, robot.mast, robot.arm_base, robot.shoulder,
         robot.elbow, robot.forearm, robot.wrist, robot.g1, robot.g2, robot.g3);
@@ -153,9 +179,12 @@ async function init() {
     let j8 = fixedJoint(robot.g3.r, robot.g2.r, 0, 0, g3_l/2, -0.035, 0, -g1_l/2);
 
     joints.push(j1, j2, j3, j4, j5, j6, j7, j8);
+    // joints.push(j1);
+
     for (let j in joints) {
         joints[j].setContactsEnabled(false);
-        //joints[j].configureMotorModel(1);
+        // if (joints[j].type() == 0) joints[j].configureMotorModel(1);
+         // console.log("joints[j].type()", joints[j].type());
     }
     for (let i = 0; i < 1000; i++) {
         world.step(eventQueue);
@@ -163,22 +192,26 @@ async function init() {
 
     for (let i in parts) {
         // parts[i].r.setAdditionalMass(0);
-        // parts[i].r.setGravityScale(1);
+        // parts[i].r.setGravityScale(0.1);
         // if (parts[i].r.numColliders() == 0)
+
+        // parts[i].c.setDensity(0.00001);
+        // parts[i].c.setFriction(10);
+
         if (i >= 2) world.createCollider(parts[i].c, parts[i].r);
+
         parts[i].r.wakeUp();
         // parts[i].r.setLinearDamping(0);
-
     }
 
-    console.log("j1", j1);
+    console.log("j1", j1, world.timestep);
 
-    j1.configureMotorPosition(-0.2, 5000, 1);
-    j2.configureMotorPosition(-0.2, 5000, 1);
-    j3.configureMotorPosition(-0.2, 5000, 1);
-    j4.configureMotorPosition(0, 50000, 1);
-    j5.configureMotorPosition(0, 50000, 1);
-    j6.configureMotorPosition(0, 50000, 1);
+    // j1.configureMotorPosition(-0.2, 5000, 0);
+    // j2.configureMotorPosition(-0.2, 5000, 0);
+    // j3.configureMotorPosition(-0.2, 5000, 0);
+    // j4.configureMotorPosition(0, 5000, 0);
+    // j5.configureMotorPosition(0, 5000, 0);
+    // j6.configureMotorPosition(0, 5000, 0);
 
     // j4.configureMotorPosition(2.0, 1, 1);
 
@@ -190,28 +223,28 @@ async function init() {
 
     // (j1 as RAPIER.RevoluteImpulseJoint).configureMotorVelocity(1.0, 0.5);
 
-    let size = 0.5
-    const geometryBox = new THREE.BoxGeometry(size, size, size);
-    for (let i = 0; i < 5; i++) {
-        let material = new THREE.MeshLambertMaterial();
-        let box = new THREE.Mesh(geometryBox, material);
-
-        box.position.set(Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5);
-        box.position.multiplyScalar(5);
-        box.material.color.setHex(0xffffff * Math.random());
-
-        let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
-                .setTranslation(box.position.x, box.position.y, box.position.z)
-                // .setCcdEnabled(true);
-        let rigidBody = world.createRigidBody(rigidBodyDesc);
-        let colliderDesc = RAPIER.ColliderDesc.cuboid(size/2, size/2, size/2);
-        let collider = world.createCollider(colliderDesc, rigidBody);
-
-        box.rigidBody = rigidBody;
-
-        scene.add(box);
-        boxes.push(box);
-    }
+    // let size = 0.5
+    // const geometryBox = new THREE.BoxGeometry(size, size, size);
+    // for (let i = 0; i < 5; i++) {
+    //     let material = new THREE.MeshLambertMaterial();
+    //     let box = new THREE.Mesh(geometryBox, material);
+    //
+    //     box.position.set(Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5);
+    //     box.position.multiplyScalar(5);
+    //     box.material.color.setHex(0xffffff * Math.random());
+    //
+    //     let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+    //             .setTranslation(box.position.x, box.position.y, box.position.z)
+    //             // .setCcdEnabled(true);
+    //     let rigidBody = world.createRigidBody(rigidBodyDesc);
+    //     let colliderDesc = RAPIER.ColliderDesc.cuboid(size/2, size/2, size/2);
+    //     let collider = world.createCollider(colliderDesc, rigidBody);
+    //
+    //     box.rigidBody = rigidBody;
+    //
+    //     scene.add(box);
+    //     boxes.push(box);
+    // }
 
 
     // let gripperGeometry1 = new THREE.BoxGeometry(0.1, 0.5, 1);
@@ -237,14 +270,14 @@ async function init() {
     // g2.body = g2_body;
     // g3.body = g3_body;
 
-    // transform_ctrl = new TransformControls(camera, renderer.domElement);
-    // transform_ctrl.addEventListener('change', render);
-    // transform_ctrl.addEventListener('dragging-changed', function (event) {
-    //     controls.enabled = ! event.value;
-    // });
-    // transform_ctrl.size = 0.75
-    // transform_ctrl.attach(gripper);
-    // scene.add(transform_ctrl);
+    transform_ctrl = new TransformControls(camera, renderer.domElement);
+    transform_ctrl.addEventListener('change', render);
+    transform_ctrl.addEventListener('dragging-changed', function (event) {
+        controls.enabled = ! event.value;
+    });
+    transform_ctrl.size = 0.75
+    transform_ctrl.attach(robot.g3.m);
+    scene.add(transform_ctrl);
 
 //==============================================================================
 
@@ -314,10 +347,12 @@ function render() {
     }
 
     for (let i in parts) {
-        let p = parts[i].r.translation();
-        let q = parts[i].r.rotation();
-        parts[i].m.position.set(p.x, p.y, p.z);
-        parts[i].m.quaternion.set(q.x, q.y, q.z, q.w);
+        if (parts[i].t == "dynamic") {
+            let p = parts[i].r.translation();
+            let q = parts[i].r.rotation();
+            parts[i].m.position.set(p.x, p.y, p.z);
+            parts[i].m.quaternion.set(q.x, q.y, q.z, q.w);
+        }
     }
 
     // let p = new THREE.Vector3();
