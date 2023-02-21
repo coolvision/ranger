@@ -39,9 +39,15 @@ let joints = [];
 
 await init();
 
-function addBox(world, scene, g, m, width, height, depth, x=0, y=0, z=0, color=0x333333) {
+function addBox(type, world, scene, g, m, width, height, depth, x=0, y=0, z=0, color=0x333333) {
 
-    let body_desc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
+    let body_desc;
+    if (type == "position") {
+        body_desc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(x, y, z);
+    } else {
+        body_desc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
+
+    }
 
     // body_desc.setCcdEnabled(true);
     // body_desc.setCanSleep(false);
@@ -63,7 +69,7 @@ function addBox(world, scene, g, m, width, height, depth, x=0, y=0, z=0, color=0
         c: collider,
         m: mesh,
         i: mesh.geometry.parameters,
-        t: "dynamic"
+        t: type
     }
 }
 
@@ -116,7 +122,7 @@ async function init() {
     let arm_w = 0.05;
     let arm_base_w = arm_w*2;
     let arm_base_h = arm_w*3;
-    let shoulder_l = 0.8;
+    let shoulder_l = 0.4;
     let elbow_l = 0.1;
     let forearm_l = 0.4;
     let wrist_l = 0.1;
@@ -124,43 +130,18 @@ async function init() {
     let g1_l = 0.1;
     let m = 0;
 
-    robot.base = addBox(world, scene, 1, 100000, base_w, base_h, base_w, 0, base_h/2, 0);
+    robot.base = addBox("dynamic", world, scene, 1, 100000, base_w, base_h, base_w, 0, base_h/2, 0);
     world.createCollider(robot.base.c, robot.base.r);
-    robot.mast = addBox(world, scene, 1, 100000, mast_w, mast_h, mast_w, 0, mast_h/2+base_h, 0);
-    robot.arm_base = addBox(world, scene, 0, 1, arm_base_w, arm_base_h, arm_base_w);
-    robot.shoulder = addBox(world, scene, 0, 1, arm_w, arm_w, shoulder_l);
-    robot.elbow = addBox(world, scene, 0, 1, arm_w, arm_w, elbow_l);
-    robot.forearm = addBox(world, scene, 0, 1, arm_w, arm_w, forearm_l);
-    robot.wrist = addBox(world, scene, 0, 1, arm_w, arm_w, wrist_l);
-    robot.g1 = addBox(world, scene, 0, 1, 0.01, arm_w, g1_l);
-    robot.g2 = addBox(world, scene, 0, 1, 0.01, arm_w, g1_l);
-
-
-
-
-    // robot.g3 = addBox(world, scene, 0, 1, 0.12, arm_w, g3_l);
-
-    let body_desc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0.5, 1, 0.5);
-    let rigid_body = world.createRigidBody(body_desc);
-    rigid_body.setAdditionalMass(1);
-    rigid_body.setGravityScale(0);
-    let collider = RAPIER.ColliderDesc.cuboid(0.12/2, arm_w/2, g3_l/2);
-    let geometry = new THREE.BoxGeometry(0.12, arm_w, g3_l);
-    let mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x333333}));
-    mesh.position.set(1, 1, 1);
-    scene.add(mesh);
-
-    robot.g3 = {
-        r: rigid_body,
-        c: collider,
-        m: mesh,
-        i: mesh.geometry.parameters,
-        t: "position"
-    }
-
-
-
-
+    robot.mast = addBox("dynamic", world, scene, 1, 100000, mast_w, mast_h, mast_w, 0, mast_h/2+base_h, 0);
+    robot.arm_base = addBox("dynamic", world, scene, 0, 1, arm_base_w, arm_base_h, arm_base_w);
+    robot.shoulder = addBox("dynamic", world, scene, 0, 1, arm_w, arm_w, shoulder_l);
+    robot.elbow = addBox("dynamic", world, scene, 0, 1, arm_w, arm_w, elbow_l);
+    robot.forearm = addBox("dynamic", world, scene, 0, 1, arm_w, arm_w, forearm_l);
+    robot.wrist = addBox("dynamic", world, scene, 0, 1, arm_w, arm_w, wrist_l);
+    robot.g1 = addBox("dynamic", world, scene, 0, 1, 0.01, arm_w, g1_l);
+    robot.g2 = addBox("dynamic", world, scene, 0, 1, 0.01, arm_w, g1_l);
+    robot.g3 = addBox("position", world, scene, 0, 1, 0.12, arm_w, g3_l, 0.5, 0.5, 0.5);
+    robot.g3.m.position.set(0.5, 0.5, 0.5);
 
     parts.push(robot.base, robot.mast, robot.arm_base, robot.shoulder,
         robot.elbow, robot.forearm, robot.wrist, robot.g1, robot.g2, robot.g3);
@@ -184,12 +165,10 @@ async function init() {
 
     for (let j in joints) {
         joints[j].setContactsEnabled(false);
-        // if (joints[j].type() == 0) joints[j].configureMotorModel(1);
-         // console.log("joints[j].type()", joints[j].type());
     }
-    for (let i = 0; i < 1000; i++) {
-        world.step(eventQueue);
-    }
+    // for (let i = 0; i < 1000; i++) {
+    //     world.step(eventQueue);
+    // }
 
     for (let i in parts) {
         parts[i].r.setAdditionalMass(0);
@@ -197,12 +176,11 @@ async function init() {
         // if (parts[i].r.numColliders() == 0)
         parts[i].r.setAngularDamping(100);
 
-        parts[i].c.setDensity(0.00001);
-        parts[i].c.setFriction(10);
+        // parts[i].c.setDensity(0.00001);
+        // parts[i].c.setFriction(10);
 
-        if (i >= 2) world.createCollider(parts[i].c, parts[i].r);
-
-        parts[i].r.wakeUp();
+        if (i >= 1) world.createCollider(parts[i].c, parts[i].r);
+        // parts[i].r.wakeUp();
         // parts[i].r.setLinearDamping(0);
     }
 
