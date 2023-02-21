@@ -147,6 +147,7 @@ async function init() {
     let collider = RAPIER.ColliderDesc.cuboid(0.12/2, arm_w/2, g3_l/2);
     let geometry = new THREE.BoxGeometry(0.12, arm_w, g3_l);
     let mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x333333}));
+    mesh.position.set(1, 1, 1);
     scene.add(mesh);
 
     robot.g3 = {
@@ -191,12 +192,13 @@ async function init() {
     }
 
     for (let i in parts) {
-        // parts[i].r.setAdditionalMass(0);
-        // parts[i].r.setGravityScale(0.1);
+        parts[i].r.setAdditionalMass(0);
+        parts[i].r.setGravityScale(1);
         // if (parts[i].r.numColliders() == 0)
+        parts[i].r.setAngularDamping(100);
 
-        // parts[i].c.setDensity(0.00001);
-        // parts[i].c.setFriction(10);
+        parts[i].c.setDensity(0.00001);
+        parts[i].c.setFriction(10);
 
         if (i >= 2) world.createCollider(parts[i].c, parts[i].r);
 
@@ -317,17 +319,17 @@ async function init() {
 
 let gripper_open = true;
 function toggleGripper() {
-    if (gripper_open) {
-        // close
-        g1.position.set(-0.2, 0, -0.5);
-        g2.position.set(0.2, 0, -0.5);
-    } else {
-        // open
-        g1.position.set(-0.4, 0, -0.5);
-        g2.position.set(0.4, 0, -0.5);
-    }
-    gripper_open = !gripper_open;
-    console.log("toggleGripper");
+    // if (gripper_open) {
+    //     // close
+    //     g1.position.set(-0.2, 0, -0.5);
+    //     g2.position.set(0.2, 0, -0.5);
+    // } else {
+    //     // open
+    //     g1.position.set(-0.4, 0, -0.5);
+    //     g2.position.set(0.4, 0, -0.5);
+    // }
+    // gripper_open = !gripper_open;
+    // console.log("toggleGripper");
 }
 
 function render() {
@@ -348,6 +350,7 @@ function render() {
 
     for (let i in parts) {
         if (parts[i].t == "dynamic") {
+            parts[i].r.wakeUp();
             let p = parts[i].r.translation();
             let q = parts[i].r.rotation();
             parts[i].m.position.set(p.x, p.y, p.z);
@@ -355,15 +358,15 @@ function render() {
         }
     }
 
-    // let p = new THREE.Vector3();
+    let p = new THREE.Vector3();
     // g1.getWorldPosition(p);
     // g1.body.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     //
     // g2.getWorldPosition(p);
     // g2.body.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    //
-    // g3.getWorldPosition(p);
-    // g3.body.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+
+    robot.g3.m.getWorldPosition(p);
+    robot.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
 
     renderer.render(scene, camera);
 }
