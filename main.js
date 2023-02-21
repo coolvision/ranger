@@ -32,21 +32,26 @@ let boxes = [];
 
 let robot = {};
 let parts = [];
+let joints = [];
 
 // const matrix = new THREE.Matrix4();
 // const color = new THREE.Color();
 
 await init();
 
-function addBox(world, scene, width, height, depth, x=0, y=0, z=0, color=0x333333) {
-
-RAPIER.RigidBodyDesc.dynamic()
+function addBox(world, scene, g, m, width, height, depth, x=0, y=0, z=0, color=0x333333) {
 
     let body_desc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
+
+    // body_desc.setCcdEnabled(true);
+    // body_desc.setCanSleep(false);
+
     let rigid_body = world.createRigidBody(body_desc);
 
+    rigid_body.setAdditionalMass(m);
+    rigid_body.setGravityScale(g);
+
     let collider = RAPIER.ColliderDesc.cuboid(width/2, height/2, depth/2);
-    world.createCollider(collider, rigid_body);
 
     let geometry = new THREE.BoxGeometry(width, height, depth);
     let mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: color}));
@@ -55,6 +60,7 @@ RAPIER.RigidBodyDesc.dynamic()
 
     return {
         r: rigid_body,
+        c: collider,
         m: mesh,
         i: mesh.geometry.parameters
     }
@@ -64,6 +70,10 @@ function fixedJoint(r1, r2, x1=0, y1=0, z1=0, x2=0, y2=0, z2=0) {
     return world.createImpulseJoint(RAPIER.JointData.fixed(
         {x: x1, y: y1, z: z1}, {w: 1.0, x: 0.0, y: 0.0, z: 0.0},
         {x: x2, y: y2, z: z2}, {w: 1.0, x: 0.0, y: 0.0, z: 0.0}), r1, r2, true);
+}
+function revoluteJoint(r1, r2, axis, x1=0, y1=0, z1=0, x2=0, y2=0, z2=0) {
+    return world.createImpulseJoint(RAPIER.JointData.revolute(
+        {x: x1, y: y1, z: z1}, {x: x2, y: y2, z: z2}, axis), r1, r2, true);
 }
 function sphericalJoint(r1, r2, x1, y1, z1, x2=0, y2=0, z2=0) {
     return world.createImpulseJoint(RAPIER.JointData.spherical(
@@ -109,185 +119,99 @@ async function init() {
     let elbow_l = 0.1;
     let forearm_l = 0.4;
     let wrist_l = 0.1;
+    let g3_l = 0.02;
+    let g1_l = 0.1;
+    let m = 0;
 
-    robot.base = addBox(world, scene, base_w, base_h, base_w, 0, base_h/2, 0);
-    robot.mast = addBox(world, scene, mast_w, mast_h, mast_w, 0, mast_h/2+base_h, 0);
+    robot.base = addBox(world, scene, 1, 100000, base_w, base_h, base_w, 0, base_h/2, 0);
+    world.createCollider(robot.base.c, robot.base.r);
+    robot.mast = addBox(world, scene, 1, 100000, mast_w, mast_h, mast_w, 0, mast_h/2+base_h, 0);
+    robot.arm_base = addBox(world, scene, 0, 1, arm_base_w, arm_base_h, arm_base_w);
+    robot.shoulder = addBox(world, scene, 0, 1, arm_w, arm_w, shoulder_l);
+    robot.elbow = addBox(world, scene, 0, 1, arm_w, arm_w, elbow_l);
+    robot.forearm = addBox(world, scene, 0, 1, arm_w, arm_w, forearm_l);
+    robot.wrist = addBox(world, scene, 0, 1, arm_w, arm_w, wrist_l);
+    robot.g1 = addBox(world, scene, 0, 1, 0.01, arm_w, g1_l);
+    robot.g2 = addBox(world, scene, 0, 1, 0.01, arm_w, g1_l);
+    robot.g3 = addBox(world, scene, 0, 1, 0.12, arm_w, g3_l);
 
-    robot.arm_base = addBox(world, scene, arm_base_w, arm_base_h, arm_base_w);
-
-    robot.shoulder = addBox(world, scene, arm_w, arm_w, shoulder_l);
-
-    robot.elbow = addBox(world, scene, arm_w, arm_w, elbow_l);
-
-    robot.forearm = addBox(world, scene, arm_w, arm_w, forearm_l);
-
-    robot.wrist = addBox(world, scene, arm_w, arm_w, wrist_l);
-
-    robot.g1 = addBox(world, scene, 0.01, arm_w, 0.1);
-    robot.g2 = addBox(world, scene, 0.01, arm_w, 0.1);
-    robot.g3 = addBox(world, scene, 0.12, arm_w, 0.02);
-
-    parts.push(robot.base, robot.mast, robot.arm_base);
-    parts.push(robot.shoulder, robot.elbow, robot.forearm);
-    parts.push(robot.wrist, robot.g1, robot.g2, robot.g3);
-
-    robot.base.r.setAdditionalMass(100000);
-    robot.mast.r.setAdditionalMass(100000);
-    robot.arm_base.r.setAdditionalMass(1000);
-    robot.shoulder.r.setAdditionalMass(1000);
-    robot.elbow.r.setAdditionalMass(100);
-    robot.forearm.r.setAdditionalMass(100);
-    robot.wrist.r.setAdditionalMass(100);
-    robot.g3.r.setAdditionalMass(1);
-
-    let j0 = fixedJoint(robot.base.r, robot.mast.r, 0, base_h/2, 0, 0, -mast_h/2, 0);
-    let j1 = fixedJoint(robot.mast.r, robot.arm_base.r).setContactsEnabled(false);
-
-    let j2 = fixedJoint(robot.arm_base.r, robot.shoulder.r,
-        0, 0, arm_base_w/2+0.01, 0, 0, -shoulder_l/2).setContactsEnabled(false);
-
-    let j3 = fixedJoint(robot.shoulder.r, robot.elbow.r,
-        0, 0, shoulder_l/2+0.01, 0, 0, -elbow_l/2).setContactsEnabled(false);
-
-    // let j4 = fixedJoint(robot.elbow.r, robot.forearm.r,
-    //     0, 0, elbow_l, 0, 0, -forearm_l).setContactsEnabled(false);
-
-
-    // let j4 = fixedJoint(robot.elbow.r, robot.forearm.r, 0, 0, 0.21, 0, 0, -0.2).setContactsEnabled(false);
-    //
-    // let j5 = fixedJoint(robot.forearm.r, robot.wrist.r, 0, 0, 0.21, 0, 0, -0.05).setContactsEnabled(false);
-    //
-    // let j6 = fixedJoint(robot.wrist.r, robot.g3.r,
-    //     0, 0, robot.wrist.i.depth/2, 0, 0, -robot.g3.i.depth/2).setContactsEnabled(false);
-    // let j7 = fixedJoint(robot.g3.r, robot.g1.r,
-    //     0, 0, robot.g3.i.depth/2, 0.035, 0, -robot.g1.i.depth/2).setContactsEnabled(false);
-    // let j8 = fixedJoint(robot.g3.r, robot.g2.r,
-    //     0, 0, robot.g3.i.depth/2, -0.035, 0, -robot.g2.i.depth/2).setContactsEnabled(false);
-
-    // for (let i = 0; i < 1000; i++) {
-    //     world.step(eventQueue);
-    // }
-    // for (let i in parts) {
-    //     parts[i].r.setAdditionalMass(0);
-    // }
-
-
-
+    parts.push(robot.base, robot.mast, robot.arm_base, robot.shoulder,
+        robot.elbow, robot.forearm, robot.wrist, robot.g1, robot.g2, robot.g3);
 
     let x = {x: 1.0, y: 0.0, z: 0.0};
     let y = {x: 0.0, y: 1.0, z: 0.0};
     let z = {x: 0.0, y: 0.0, z: 1.0};
 
-    // let j1 = world.createImpulseJoint(RAPIER.JointData.revolute(
-    //     {x: 0.0, y: 0, z: 0}, {x: 0.0, y: 0.0, z: -0.3}, x),
-    //     robot.mast.r, robot.shoulder.r, true);
-    //
-    // let j2 = world.createImpulseJoint(RAPIER.JointData.revolute(
-    //     {x: 0.0, y: 0, z: 0.25}, {x: 0.0, y: 0.0, z: -0.25}, x),
-    //     robot.shoulder.r, robot.forearm.r, true);
-    //
-    // let j3 = world.createImpulseJoint(RAPIER.JointData.revolute(
-    //     {x: 0.0, y: 0, z: 0.25}, {x: 0.0, y: 0.0, z: -0.1}, x),
-    //     robot.forearm.r, robot.wrist.r, true);
+    let j0 = fixedJoint(robot.base.r, robot.mast.r, 0, base_h/2, 0, 0, -mast_h/2, 0);
+    let j1 = revoluteJoint(robot.mast.r, robot.arm_base.r, y);
+    let j2 = revoluteJoint(robot.arm_base.r, robot.shoulder.r, x, 0, 0, arm_base_w/2+m, 0, 0, -shoulder_l/2);
+    let j3 = revoluteJoint(robot.shoulder.r, robot.elbow.r, x, 0, 0, shoulder_l/2+m, 0, 0, -elbow_l/2);
+    let j4 = revoluteJoint(robot.elbow.r, robot.forearm.r, z, 0, 0, elbow_l/2+m, 0, 0, -forearm_l/2);
+    let j5 = revoluteJoint(robot.forearm.r, robot.wrist.r, x, 0, 0, forearm_l/2+m, 0, 0, -wrist_l/2);
+    let j6 = revoluteJoint(robot.wrist.r, robot.g3.r, z, 0, 0, wrist_l/2, 0, 0, -g3_l/2);
+    let j7 = fixedJoint(robot.g3.r, robot.g1.r, 0, 0, g3_l/2, 0.035, 0, -g1_l/2);
+    let j8 = fixedJoint(robot.g3.r, robot.g2.r, 0, 0, g3_l/2, -0.035, 0, -g1_l/2);
+
+    joints.push(j1, j2, j3, j4, j5, j6, j7, j8);
+    for (let j in joints) {
+        joints[j].setContactsEnabled(false);
+        //joints[j].configureMotorModel(1);
+    }
+    for (let i = 0; i < 1000; i++) {
+        world.step(eventQueue);
+    }
+
+    for (let i in parts) {
+        // parts[i].r.setAdditionalMass(0);
+        // parts[i].r.setGravityScale(1);
+        // if (parts[i].r.numColliders() == 0)
+        if (i >= 2) world.createCollider(parts[i].c, parts[i].r);
+        parts[i].r.wakeUp();
+        // parts[i].r.setLinearDamping(0);
+
+    }
+
+    console.log("j1", j1);
+
+    j1.configureMotorPosition(-0.2, 5000, 1);
+    j2.configureMotorPosition(-0.2, 5000, 1);
+    j3.configureMotorPosition(-0.2, 5000, 1);
+    j4.configureMotorPosition(0, 50000, 1);
+    j5.configureMotorPosition(0, 50000, 1);
+    j6.configureMotorPosition(0, 50000, 1);
+
+    // j4.configureMotorPosition(2.0, 1, 1);
+
+    // j1.configureMotorVelocity(-5.0, 5000);
+    // j5.configureMotorVelocity(-5.0, 5000);
+    // j3.configureMotorVelocity(5.0, 5);
 
 
 
-
-
-
-
-    // let x = { x: 1.0, y: 0.0, z: 0.0 };
-    // let z = { x: 0.0, y: 0.0, z: 1.0 };
-
-    // joint.configureMotorVelocity(5.0, 5);
-
-    console.log(robot.base, robot.mast)
-
-    // (joint as RAPIER.RevoluteImpulseJoint).configureMotorVelocity(1.0, 0.5);
-
-
-    // let shoulder = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic());
-    // let shoulder_collider = RAPIER.ColliderDesc.cuboid(0.4, 0.4, 5);
-    // world.createCollider(shoulder_collider, shoulder);
-    //
-    // let gripperGeometry = new THREE.BoxGeometry();
-    // let material = new THREE.MeshLambertMaterial();
-    // material.color.setHex(0x333333);
-    // g1 = new THREE.Mesh(gripperGeometry1, material);
-    // // g1.position.set(-0.3, 0, -0.5);
-    //
-    //
-    //
-    //
-    //
-    // let forearm = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic());
-    // let forearm_collider = RAPIER.ColliderDesc.cuboid(0.4, 0.4, 5);
-    // world.createCollider(forearm_collider, forearm);
-    //
-    // let wrist = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic());
-    // let wrist_collider = RAPIER.ColliderDesc.cuboid(0.4, 0.4, 1.5);
-    // world.createCollider(wrist_collider, wrist);
-    //
-    // let g1_desc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-    // let g1_body = world.createRigidBody(g1_desc);
-    // let g1_collider = RAPIER.ColliderDesc.cuboid(0.1, 0.5, 1);
-    // world.createCollider(g1_collider, g1_body);
-    //
-    // let g2_desc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-    // let g2_body = world.createRigidBody(g2_desc);
-    // let g2_collider = RAPIER.ColliderDesc.cuboid(0.1, 0.5, 1);
-    // world.createCollider(g2_collider, g2_body);
-    //
-    // let g3_desc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-    // let g3_body = world.createRigidBody(g3_desc);
-    // let g3_collider = RAPIER.ColliderDesc.cuboid(1.2, 0.5, 0.1);
-    // world.createCollider(g3_collider, g3_body);
-    //
-    //
-    //
-    //
-    //
-    // let gripperGeometry1 = new THREE.BoxGeometry();
-    // let material = new THREE.MeshLambertMaterial();
-    // material.color.setHex(0x333333);
-    // g1 = new THREE.Mesh(gripperGeometry1, material);
-    // g1.position.set(-0.3, 0, -0.5);
-    //
-    // g2 = new THREE.Mesh(gripperGeometry1, material);
-    // g2.position.set(0.3, 0, -0.5);
-    //
-    // let gripperGeometry2 = new THREE.BoxGeometry(1.2, 0.5, 0.1);
-    // g3 = new THREE.Mesh(gripperGeometry2, material);
-    //
-    //
-    //
-
-
-
-
+    // (j1 as RAPIER.RevoluteImpulseJoint).configureMotorVelocity(1.0, 0.5);
 
     let size = 0.5
-    // const geometryBox = new THREE.BoxGeometry(size, size, size);
-    // for (let i = 0; i < 5; i++) {
-    //     let material = new THREE.MeshLambertMaterial();
-    //     let box = new THREE.Mesh(geometryBox, material);
-    //
-    //     box.position.set(Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5);
-    //     box.position.multiplyScalar(5);
-    //     box.material.color.setHex(0xffffff * Math.random());
-    //
-    //     let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
-    //             .setTranslation(box.position.x, box.position.y, box.position.z)
-    //             // .setCcdEnabled(true);
-    //     let rigidBody = world.createRigidBody(rigidBodyDesc);
-    //     let colliderDesc = RAPIER.ColliderDesc.cuboid(size/2, size/2, size/2);
-    //     let collider = world.createCollider(colliderDesc, rigidBody);
-    //
-    //     box.rigidBody = rigidBody;
-    //
-    //     scene.add(box);
-    //     boxes.push(box);
-    // }
+    const geometryBox = new THREE.BoxGeometry(size, size, size);
+    for (let i = 0; i < 5; i++) {
+        let material = new THREE.MeshLambertMaterial();
+        let box = new THREE.Mesh(geometryBox, material);
+
+        box.position.set(Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5);
+        box.position.multiplyScalar(5);
+        box.material.color.setHex(0xffffff * Math.random());
+
+        let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+                .setTranslation(box.position.x, box.position.y, box.position.z)
+                // .setCcdEnabled(true);
+        let rigidBody = world.createRigidBody(rigidBodyDesc);
+        let colliderDesc = RAPIER.ColliderDesc.cuboid(size/2, size/2, size/2);
+        let collider = world.createCollider(colliderDesc, rigidBody);
+
+        box.rigidBody = rigidBody;
+
+        scene.add(box);
+        boxes.push(box);
+    }
 
 
     // let gripperGeometry1 = new THREE.BoxGeometry(0.1, 0.5, 1);
