@@ -110,9 +110,13 @@ async function init() {
     world = new RAPIER.World(gravity);
     eventQueue = new RAPIER.EventQueue(true);
 
+    let ip = new RAPIER.IntegrationParameters();
+    ip.erp = 1.0;
+
     // Create the ground
-    let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 1, 10.0)
-        .setTranslation(0, -1, 0)
+    let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 1, 10.0);
+    groundColliderDesc.setTranslation(0, -1, 0);
+    groundColliderDesc.setFriction(0);
     world.createCollider(groundColliderDesc);
 
     let base_w = 0.4;
@@ -130,7 +134,7 @@ async function init() {
     let g1_l = 0.1;
     let m = 0;
 
-    robot.base = addBox("dynamic", world, scene, 1, 100000, base_w, base_h, base_w, 0, base_h/2, 0);
+    robot.base = addBox("position", world, scene, 1, 100000, base_w, base_h, base_w, 0, base_h/2, 0);
     world.createCollider(robot.base.c, robot.base.r);
     robot.mast = addBox("dynamic", world, scene, 1, 100000, mast_w, mast_h, mast_w, 0, mast_h/2+base_h, 0);
     robot.arm_base = addBox("dynamic", world, scene, 0, 1, arm_base_w, arm_base_h, arm_base_w);
@@ -142,6 +146,9 @@ async function init() {
     robot.g2 = addBox("dynamic", world, scene, 0, 1, 0.01, arm_w, g1_l);
     robot.g3 = addBox("position", world, scene, 0, 1, 0.12, arm_w, g3_l, 0.5, 0.5, 0.5);
     robot.g3.m.position.set(0.5, 0.5, 0.5);
+
+    robot.base.r.lockRotations(true, true);
+    robot.mast.r.lockRotations(true, true);
 
     parts.push(robot.base, robot.mast, robot.arm_base, robot.shoulder,
         robot.elbow, robot.forearm, robot.wrist, robot.g1, robot.g2, robot.g3);
@@ -173,82 +180,24 @@ async function init() {
     for (let i in parts) {
         parts[i].r.setAdditionalMass(0);
         parts[i].r.setGravityScale(1);
-        // if (parts[i].r.numColliders() == 0)
         parts[i].r.setAngularDamping(100);
+
+        if (i >= 2) parts[i].r.setGravityScale(0);
 
         // parts[i].c.setDensity(0.00001);
         // parts[i].c.setFriction(10);
 
-        if (i >= 1) world.createCollider(parts[i].c, parts[i].r);
+        if (parts[i].r.numColliders() == 0) world.createCollider(parts[i].c, parts[i].r);
+
+        // if (i >= 2) world.createCollider(parts[i].c, parts[i].r);
         // parts[i].r.wakeUp();
-        // parts[i].r.setLinearDamping(0);
+        // parts[i].r.setLinearDamping(10);
+        //
+        parts[i].c.setFriction(0);
     }
 
     console.log("j1", j1, world.timestep);
 
-    // j1.configureMotorPosition(-0.2, 5000, 0);
-    // j2.configureMotorPosition(-0.2, 5000, 0);
-    // j3.configureMotorPosition(-0.2, 5000, 0);
-    // j4.configureMotorPosition(0, 5000, 0);
-    // j5.configureMotorPosition(0, 5000, 0);
-    // j6.configureMotorPosition(0, 5000, 0);
-
-    // j4.configureMotorPosition(2.0, 1, 1);
-
-    // j1.configureMotorVelocity(-5.0, 5000);
-    // j5.configureMotorVelocity(-5.0, 5000);
-    // j3.configureMotorVelocity(5.0, 5);
-
-
-
-    // (j1 as RAPIER.RevoluteImpulseJoint).configureMotorVelocity(1.0, 0.5);
-
-    // let size = 0.5
-    // const geometryBox = new THREE.BoxGeometry(size, size, size);
-    // for (let i = 0; i < 5; i++) {
-    //     let material = new THREE.MeshLambertMaterial();
-    //     let box = new THREE.Mesh(geometryBox, material);
-    //
-    //     box.position.set(Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5);
-    //     box.position.multiplyScalar(5);
-    //     box.material.color.setHex(0xffffff * Math.random());
-    //
-    //     let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
-    //             .setTranslation(box.position.x, box.position.y, box.position.z)
-    //             // .setCcdEnabled(true);
-    //     let rigidBody = world.createRigidBody(rigidBodyDesc);
-    //     let colliderDesc = RAPIER.ColliderDesc.cuboid(size/2, size/2, size/2);
-    //     let collider = world.createCollider(colliderDesc, rigidBody);
-    //
-    //     box.rigidBody = rigidBody;
-    //
-    //     scene.add(box);
-    //     boxes.push(box);
-    // }
-
-
-    // let gripperGeometry1 = new THREE.BoxGeometry(0.1, 0.5, 1);
-    // let material = new THREE.MeshLambertMaterial();
-    // material.color.setHex(0x333333);
-    // g1 = new THREE.Mesh(gripperGeometry1, material);
-    // g1.position.set(-0.3, 0, -0.5);
-    //
-    // g2 = new THREE.Mesh(gripperGeometry1, material);
-    // g2.position.set(0.3, 0, -0.5);
-    //
-    // let gripperGeometry2 = new THREE.BoxGeometry(1.2, 0.5, 0.1);
-    // g3 = new THREE.Mesh(gripperGeometry2, material);
-    //
-    // gripper = new THREE.Group();
-    // gripper.position.set(0, 2, 0);
-    // gripper.add(g1);
-    // gripper.add(g2);
-    // gripper.add(g3);
-    // scene.add(gripper);
-    //
-    // g1.body = g1_body;
-    // g2.body = g2_body;
-    // g3.body = g3_body;
 
     transform_ctrl = new TransformControls(camera, renderer.domElement);
     transform_ctrl.addEventListener('change', render);
@@ -358,50 +307,71 @@ function onWindowResize() {
 
 window.addEventListener( 'keydown', function ( event ) {
 
-
+    let p = new THREE.Vector3();
+    let q = new THREE.Quaternion();
 
     switch ( event.code ) {
+
         case "KeyG":
             toggleGripper();
             break;
-        // case "Digit1":
-        //     openGripper();
-        //     break;
+
+        case "KeyW":
+            p.set(0, 0, 0.05);
+            p.applyQuaternion(robot.base.m.quaternion);
+            p.add(robot.base.m.position);
+            robot.base.m.position.set(p.x, p.y, p.z);
+            robot.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+            break;
+
+        case "KeyS":
+            p.set(0, 0, -0.05);
+            p.applyQuaternion(robot.base.m.quaternion);
+            p.add(robot.base.m.position);
+            robot.base.m.position.set(p.x, p.y, p.z);
+            robot.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+            break;
+
+        case "KeyA":
+            robot.base.m.rotateY(THREE.MathUtils.degToRad(5));
+            q = robot.base.m.quaternion;
+            robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+            break;
+
+        case "KeyD":
+            robot.base.m.rotateY(THREE.MathUtils.degToRad(-5));
+            q = robot.base.m.quaternion;
+            robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+            break;
+
     }
 
-    switch ( event.keyCode ) {
-
-        case 81: // Q
-            transform_ctrl.setSpace( transform_ctrl.space === 'local' ? 'world' : 'local' );
-            break;
-
-
-        case 81: // Q
-            transform_ctrl.setSpace( transform_ctrl.space === 'local' ? 'world' : 'local' );
-            break;
-
-        case 16: // Shift
-            // transform_ctrl.setTranslationSnap( 100 );
-            // transform_ctrl.setRotationSnap( THREE.MathUtils.degToRad( 15 ) );
-            // transform_ctrl.setScaleSnap( 0.25 );
-            break;
-
-        case 87: // W
-            transform_ctrl.setMode( 'translate' );
-            break;
-
-        case 69: // E
-            transform_ctrl.setMode( 'rotate' );
-            break;
-
-        case 187:
-        case 107: // +, =, num+
-            transform_ctrl.setSize( transform_ctrl.size + 0.1 );
-            break;
-
-        case 189:
-        case 109: // -, _, num-
-            transform_ctrl.setSize( Math.max( transform_ctrl.size - 0.1, 0.1 ) );
-            break;
-    }
+    // switch ( event.keyCode ) {
+    //
+    //     case 81: // Q
+    //         transform_ctrl.setSpace( transform_ctrl.space === 'local' ? 'world' : 'local' );
+    //         break;
+    //
+    //     case 81: // Q
+    //         transform_ctrl.setSpace( transform_ctrl.space === 'local' ? 'world' : 'local' );
+    //         break;
+    //
+    //     case 87: // W
+    //         transform_ctrl.setMode( 'translate' );
+    //         break;
+    //
+    //     case 69: // E
+    //         transform_ctrl.setMode( 'rotate' );
+    //         break;
+    //
+    //     case 187:
+    //     case 107: // +, =, num+
+    //         transform_ctrl.setSize( transform_ctrl.size + 0.1 );
+    //         break;
+    //
+    //     case 189:
+    //     case 109: // -, _, num-
+    //         transform_ctrl.setSize( Math.max( transform_ctrl.size - 0.1, 0.1 ) );
+    //         break;
+    // }
 } );
