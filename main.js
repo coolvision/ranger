@@ -22,20 +22,15 @@ const onDownPosition = new THREE.Vector2();
 
 const geometry = new THREE.BoxGeometry( 20, 20, 20 );
 let transform_ctrl;
+let pointer_target = new THREE.Mesh();
 
 let world;
 let eventQueue;
 let boxes = [];
 
-// let gripper;
-// let g1, g2, g3;
-
 let robot = {};
 let parts = [];
 let joints = [];
-
-// const matrix = new THREE.Matrix4();
-// const color = new THREE.Color();
 
 await init();
 
@@ -184,20 +179,16 @@ async function init() {
 
         if (i >= 2) parts[i].r.setGravityScale(0);
 
-        // parts[i].c.setDensity(0.00001);
-        // parts[i].c.setFriction(10);
-
         if (parts[i].r.numColliders() == 0) world.createCollider(parts[i].c, parts[i].r);
 
-        // if (i >= 2) world.createCollider(parts[i].c, parts[i].r);
-        // parts[i].r.wakeUp();
-        // parts[i].r.setLinearDamping(10);
-        //
         parts[i].c.setFriction(0);
     }
 
     console.log("j1", j1, world.timestep);
 
+
+    scene.add(pointer_target);
+    pointer_target.position.set(0.5, 0.5, 0.5);
 
     transform_ctrl = new TransformControls(camera, renderer.domElement);
     transform_ctrl.addEventListener('change', render);
@@ -205,7 +196,11 @@ async function init() {
         controls.enabled = ! event.value;
     });
     transform_ctrl.size = 0.75
-    transform_ctrl.attach(robot.g3.m);
+    // transform_ctrl.attach(robot.g3.m);
+    // pointer_target.position.set(0.5, 0.5, 0.5)
+
+    transform_ctrl.attach(pointer_target);
+
     scene.add(transform_ctrl);
 
 //==============================================================================
@@ -292,8 +287,15 @@ function render() {
     // g2.getWorldPosition(p);
     // g2.body.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
 
-    robot.g3.m.getWorldPosition(p);
-    robot.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    if (pointer_target.position.distanceTo(robot.arm_base.m.position) < 0.9) {
+        pointer_target.getWorldPosition(p);
+        robot.g3.m.position.set(p.x, p.y, p.z);
+        robot.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    }
+
+    // console.log("distance", pointer_target.position.distanceTo(robot.arm_base.m.position))
+    // console.log("p", transform_ctrl.position, robot.arm_base.m.position);
+
 
     renderer.render(scene, camera);
 }
@@ -308,42 +310,45 @@ function onWindowResize() {
 window.addEventListener( 'keydown', function ( event ) {
 
     let p = new THREE.Vector3();
+    let angle = 0;
     let q = new THREE.Quaternion();
+    let update_position = false;
+    let update_rotation = false;
 
     switch ( event.code ) {
 
         case "KeyG":
             toggleGripper();
             break;
-
         case "KeyW":
             p.set(0, 0, 0.05);
-            p.applyQuaternion(robot.base.m.quaternion);
-            p.add(robot.base.m.position);
-            robot.base.m.position.set(p.x, p.y, p.z);
-            robot.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+            update_position = true;
             break;
-
         case "KeyS":
             p.set(0, 0, -0.05);
-            p.applyQuaternion(robot.base.m.quaternion);
-            p.add(robot.base.m.position);
-            robot.base.m.position.set(p.x, p.y, p.z);
-            robot.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+            update_position = true;
             break;
-
         case "KeyA":
-            robot.base.m.rotateY(THREE.MathUtils.degToRad(5));
-            q = robot.base.m.quaternion;
-            robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+            angle = 5;
+            update_rotation = true;
             break;
-
         case "KeyD":
-            robot.base.m.rotateY(THREE.MathUtils.degToRad(-5));
-            q = robot.base.m.quaternion;
-            robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+            angle = -5;
+            update_rotation = true;
             break;
 
+    }
+
+    if (update_position) {
+        p.applyQuaternion(robot.base.m.quaternion);
+        p.add(robot.base.m.position);
+        robot.base.m.position.set(p.x, p.y, p.z);
+        robot.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    }
+    if (update_rotation) {
+        robot.base.m.rotateY(THREE.MathUtils.degToRad(angle));
+        q = robot.base.m.quaternion;
+        robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
 
     // switch ( event.keyCode ) {
