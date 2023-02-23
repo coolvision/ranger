@@ -174,21 +174,24 @@ async function init() {
 
     for (let i in parts) {
         parts[i].r.setAdditionalMass(0);
-        parts[i].r.setGravityScale(1);
+        // parts[i].r.setGravityScale(1);
         parts[i].r.setAngularDamping(100);
 
-        if (i >= 2) parts[i].r.setGravityScale(0);
+        // if (i >= 2) parts[i].r.setGravityScale(0);
 
         if (parts[i].r.numColliders() == 0) world.createCollider(parts[i].c, parts[i].r);
 
-        parts[i].c.setFriction(0);
+        // parts[i].c.setFriction(0);
     }
 
     console.log("j1", j1, world.timestep);
 
 
-    scene.add(pointer_target);
+    robot.base.m.add(pointer_target);
+
+    // scene.add(pointer_target);
     pointer_target.position.set(0.5, 0.5, 0.5);
+
 
     transform_ctrl = new TransformControls(camera, renderer.domElement);
     transform_ctrl.addEventListener('change', render);
@@ -196,8 +199,6 @@ async function init() {
         controls.enabled = ! event.value;
     });
     transform_ctrl.size = 0.75
-    // transform_ctrl.attach(robot.g3.m);
-    // pointer_target.position.set(0.5, 0.5, 0.5)
 
     transform_ctrl.attach(pointer_target);
 
@@ -287,15 +288,11 @@ function render() {
     // g2.getWorldPosition(p);
     // g2.body.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
 
-    if (pointer_target.position.distanceTo(robot.arm_base.m.position) < 0.9) {
+    // if (pointer_target.position.distanceTo(robot.arm_base.m.position) < 1.0) {
         pointer_target.getWorldPosition(p);
         robot.g3.m.position.set(p.x, p.y, p.z);
         robot.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    }
-
-    // console.log("distance", pointer_target.position.distanceTo(robot.arm_base.m.position))
-    // console.log("p", transform_ctrl.position, robot.arm_base.m.position);
-
+    // }
 
     renderer.render(scene, camera);
 }
@@ -340,43 +337,27 @@ window.addEventListener( 'keydown', function ( event ) {
     }
 
     if (update_position) {
+
         p.applyQuaternion(robot.base.m.quaternion);
+        // pointer_target.position.add(p);
+
         p.add(robot.base.m.position);
         robot.base.m.position.set(p.x, p.y, p.z);
+
+        robot.base.m.updateWorldMatrix();
+
         robot.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     }
     if (update_rotation) {
-        robot.base.m.rotateY(THREE.MathUtils.degToRad(angle));
+        angle = THREE.MathUtils.degToRad(angle);
+
+        // let pl = pointer_target.position.clone().sub(robot.base.m.position);
+        // pl.rotateY(angle);
+        // pl.add(robot.base.m.position);
+        // pointer_target.position.set(pl.x, pl.y, pl.z);
+
+        robot.base.m.rotateY(angle);
         q = robot.base.m.quaternion;
         robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
-
-    // switch ( event.keyCode ) {
-    //
-    //     case 81: // Q
-    //         transform_ctrl.setSpace( transform_ctrl.space === 'local' ? 'world' : 'local' );
-    //         break;
-    //
-    //     case 81: // Q
-    //         transform_ctrl.setSpace( transform_ctrl.space === 'local' ? 'world' : 'local' );
-    //         break;
-    //
-    //     case 87: // W
-    //         transform_ctrl.setMode( 'translate' );
-    //         break;
-    //
-    //     case 69: // E
-    //         transform_ctrl.setMode( 'rotate' );
-    //         break;
-    //
-    //     case 187:
-    //     case 107: // +, =, num+
-    //         transform_ctrl.setSize( transform_ctrl.size + 0.1 );
-    //         break;
-    //
-    //     case 189:
-    //     case 109: // -, _, num-
-    //         transform_ctrl.setSize( Math.max( transform_ctrl.size - 0.1, 0.1 ) );
-    //         break;
-    // }
 } );
