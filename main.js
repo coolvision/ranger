@@ -199,7 +199,7 @@ async function init() {
         controls.enabled = ! event.value;
     });
     transform_ctrl.size = 0.75
-
+    transform_ctrl.setSpace("local");
     transform_ctrl.attach(pointer_target);
 
     scene.add(transform_ctrl);
@@ -271,28 +271,35 @@ function render() {
         boxes[i].quaternion.set(q.x, q.y, q.z, q.w);
     }
 
+
+    let p = new THREE.Vector3();
+    let q = new THREE.Quaternion();
+    // if (pointer_target.position.length() < 1.0) {
+        pointer_target.getWorldPosition(p);
+        robot.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+        pointer_target.getWorldQuaternion(q);
+        robot.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+        // for (let i = 0; i < 10; i++) {
+        //     world.step(eventQueue);
+        // }
+    // }
+
+
     for (let i in parts) {
-        if (parts[i].t == "dynamic") {
+        // if (parts[i].t == "dynamic") {
             parts[i].r.wakeUp();
             let p = parts[i].r.translation();
             let q = parts[i].r.rotation();
             parts[i].m.position.set(p.x, p.y, p.z);
             parts[i].m.quaternion.set(q.x, q.y, q.z, q.w);
-        }
+        // }
     }
 
-    let p = new THREE.Vector3();
     // g1.getWorldPosition(p);
     // g1.body.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     //
     // g2.getWorldPosition(p);
     // g2.body.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-
-    // if (pointer_target.position.distanceTo(robot.arm_base.m.position) < 1.0) {
-        pointer_target.getWorldPosition(p);
-        robot.g3.m.position.set(p.x, p.y, p.z);
-        robot.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    // }
 
     renderer.render(scene, camera);
 }
@@ -337,27 +344,28 @@ window.addEventListener( 'keydown', function ( event ) {
     }
 
     if (update_position) {
-
         p.applyQuaternion(robot.base.m.quaternion);
-        // pointer_target.position.add(p);
-
         p.add(robot.base.m.position);
         robot.base.m.position.set(p.x, p.y, p.z);
-
         robot.base.m.updateWorldMatrix();
-
         robot.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     }
+
     if (update_rotation) {
         angle = THREE.MathUtils.degToRad(angle);
-
-        // let pl = pointer_target.position.clone().sub(robot.base.m.position);
-        // pl.rotateY(angle);
-        // pl.add(robot.base.m.position);
-        // pointer_target.position.set(pl.x, pl.y, pl.z);
-
         robot.base.m.rotateY(angle);
         q = robot.base.m.quaternion;
         robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
+
+    // if (pointer_target.position.length() < 1.0) {
+        pointer_target.getWorldPosition(p);
+        robot.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+        pointer_target.getWorldQuaternion(q);
+        robot.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+        for (let i = 0; i < 10; i++) {
+            world.step(eventQueue);
+        }
+    // }
+
 } );
