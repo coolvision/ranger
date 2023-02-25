@@ -249,56 +249,84 @@ function render() {
 
         for (let i in parts) {
 
-            // if (i > 3) break;
-
             parts[i].r.wakeUp();
-            let p = parts[i].r.translation();
 
-            // console.log("part", i);
-
-            let v = new THREE.Vector3();
-            v.set(p.x, p.y, p.z);
-            let vl = v.clone();
-            parts[i].m.parent.worldToLocal(vl);
-            // console.log("R", v.x.toFixed(3), v.y.toFixed(3), v.z.toFixed(3), "L", vl.x.toFixed(3), vl.y.toFixed(3), vl.z.toFixed(3));
-
-            // let v3 = new THREE.Vector3();
-            // parts[i].m.getWorldPosition(v3)
-            // console.log("w1", i, v3.x.toFixed(3), v3.y.toFixed(3), v3.z.toFixed(3));
-
-            parts[i].m.position.set(vl.x, vl.y, vl.z);
-
-            let pwq = new THREE.Quaternion();
-            parts[i].m.parent.getWorldQuaternion(pwq);
-            pwq.invert();
-
-            let rbq = new THREE.Quaternion();
-            let q = parts[i].r.rotation();
-            rbq.set(q.x, q.y, q.z, q.w);
-            rbq.multiply(pwq);
+            // let p = parts[i].r.translation();
+            //
+            // let v = new THREE.Vector3();
+            // v.set(p.x, p.y, p.z);
+            // let vl = v.clone();
+            // parts[i].m.parent.worldToLocal(vl);
+            //
+            // parts[i].m.position.set(vl.x, vl.y, vl.z);
+            //
+            //
+            //
+            //
+            // let pwq = new THREE.Quaternion();
+            // parts[i].m.parent.getWorldQuaternion(pwq);
+            // pwq.invert();
+            //
+            //
+            // rbq.multiply(pwq);
 
             // let v4 = new THREE.Vector3();
             // parts[i].m.getWorldPosition(v4)
             // console.log("w2", i, v4.x.toFixed(3), v4.y.toFixed(3), v4.z.toFixed(3));
 
             // parts[i].m.position.set(p.x, p.y, p.z);
-            parts[i].m.quaternion.set(rbq.x, rbq.y, rbq.z, rbq.w);
+            // parts[i].m.quaternion.set(rbq.x, rbq.y, rbq.z, rbq.w);
 
 
-            let pq = new THREE.Quaternion();
-            parts[i].m.parent.getWorldQuaternion(pq);
+            // let pq = new THREE.Quaternion();
+            // parts[i].m.parent.getWorldQuaternion(pq);
 
-            const m = new THREE.Matrix4();
-            m.compose(pq, parts[i].m.parent.position.clone(), new THREE.Vector3(1, 1, 1));
+            let q = parts[i].r.rotation();
+            let q1 = new THREE.Quaternion();
+            q1.set(q.x, q.y, q.z, q.w);
 
-            console.log("m", m);
+            let p = parts[i].r.translation();
+            let p1 = new THREE.Vector3();
+            p1.set(p.x, p.y, p.z);
+
+            let m_body = new THREE.Matrix4();
+            // m_body.makeRotationFromQuaternion(q1);
+            // m_body.setPosition(p1);
+            m_body.compose(p1, q1, new THREE.Vector3(1, 1, 1));
+
+            let s1 = new THREE.Vector3();
+            s1.setFromMatrixScale(m_body);
 
 
+            let m_parent = parts[i].m.parent.matrixWorld.clone();
+
+            let s2 = new THREE.Vector3();
+            s2.setFromMatrixScale(m_parent);
 
 
+            // let m_parent = new THREE.Matrix4();
+            // let p2 = new THREE.Vector3();
+            // parts[i].m.parent.getWorldPosition(p2);
+            // m_parent.setPosition(p2);
 
 
-            // parts[i].m.updateWorldMatrix(true, true)
+            // console.log("m", i, m_parent.clone(), m_body.clone());
+
+            m_parent.invert();
+            m_parent.multiply(m_body);
+
+            let s3 = new THREE.Vector3();
+            s3.setFromMatrixScale(m_parent);
+
+            // console.log("s", i, s1, s2, s3);
+
+            parts[i].m.position.set(0, 0, 0);
+            parts[i].m.quaternion.set(0, 0, 0, 1);
+            parts[i].m.scale.set(1, 1, 1);
+            parts[i].m.applyMatrix4(m_parent);
+
+
+            // parts[i].m.updateWorldMatrix(true, true);
         }
     // }
 
