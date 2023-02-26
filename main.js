@@ -146,7 +146,7 @@ async function init() {
     let y = {x: 0.0, y: 1.0, z: 0.0};
     let z = {x: 0.0, y: 0.0, z: 1.0};
 
-    let j0 = fixedJoint(robot.base.r, robot.mast.r, y, 0, base_h/2, 0, 0, -mast_h/2, 0);
+    let j0 = fixedJoint(robot.base.r, robot.mast.r, 0, base_h/2, 0, 0, -mast_h/2, 0);
     let j1 = revoluteJoint(robot.mast.r, robot.arm_base.r, y, 0, 0, 0, -arm_w*0.75, 0, 0);
     let j2 = revoluteJoint(robot.arm_base.r, robot.shoulder.r, x, arm_base_w/2, 0, 0, -arm_w/2, 0, -shoulder_l/2);
     let j3 = revoluteJoint(robot.shoulder.r, robot.elbow.r, x,  -arm_w/2, 0, shoulder_l/2-arm_w/2,  arm_w/2, 0, -elbow_l/2);
@@ -331,23 +331,12 @@ window.addEventListener( 'keydown', function ( event ) {
         let q = new THREE.Quaternion();
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
         q.multiply(robot.base.m.quaternion);
-        robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-        world.step(eventQueue);
-        world.step(eventQueue);
-    }
-
-    // for (let i = 0; i < 100; i++) {
-    //     world.step(eventQueue);
-    // }
-
-    // if (pointer_target.position.length() < 1.0) {
-        // pointer_target.getWorldPosition(p);
-        // robot.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-        // pointer_target.getWorldQuaternion(q);
-        // robot.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-        // for (let i = 0; i < 100; i++) {
+        // robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+        robot.base.r.setRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+        // world.step(eventQueue);
+        // world.step(eventQueue);
+        // for (let i = 0; i < 50; i++) {
         //     world.step(eventQueue);
         // }
-    // }
-
+    }
 } );
