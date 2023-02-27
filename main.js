@@ -28,9 +28,11 @@ let world;
 let eventQueue;
 let boxes = [];
 
-let robot = {};
+let r = {};
 let parts = [];
 let joints = [];
+let gripper_v = 0.2;
+let gripper_s = 100;
 
 await init();
 
@@ -62,7 +64,10 @@ function addBox(type, world, scene, g, m, width, height, depth, x=0, y=0, z=0, c
         c: collider,
         m: mesh,
         i: mesh.geometry.parameters,
-        t: type
+        t: type,
+        w: width,
+        h: height,
+        d: depth
     }
 }
 
@@ -74,6 +79,13 @@ function fixedJoint(r1, r2, x1=0, y1=0, z1=0, x2=0, y2=0, z2=0) {
 function revoluteJoint(r1, r2, axis, x1=0, y1=0, z1=0, x2=0, y2=0, z2=0) {
     return world.createImpulseJoint(RAPIER.JointData.revolute(
         {x: x1, y: y1, z: z1}, {x: x2, y: y2, z: z2}, axis), r1, r2, true);
+}
+function prismaticJoint(r1, r2, axis, l1, l2, x1=0, y1=0, z1=0, x2=0, y2=0, z2=0) {
+    let params = RAPIER.JointData.prismatic(
+        {x: x1, y: y1, z: z1}, {x: x2, y: y2, z: z2}, axis)
+    params.limitsEnabled = true;
+    params.limits = [l1, l2];
+    return world.createImpulseJoint(params, r1, r2, true);
 }
 
 async function init() {
@@ -108,73 +120,62 @@ async function init() {
     groundColliderDesc.setFriction(0);
     world.createCollider(groundColliderDesc);
 
-    let base_w = 0.4;
-    let base_h = 0.15;
-    let mast_w = 0.075;
-    let mast_h = 1.5;
-
     let arm_w = 0.05;
-    let arm_base_w = arm_w*4;
-    let arm_base_d = mast_w*Math.sqrt(2);
-    let arm_base_h = mast_w*Math.sqrt(2);
+    r.base = addBox("position", world, scene, 0, 0, 0.4, 0.15, 0.4);
+    r.mast = addBox("dynamic", world, r.base.m, 0, 0, 0.075, 1.5, 0.075);
+    r.indicator = addBox("dynamic", world, r.base.m, 0, 0, 0.02, 0.02, 0.02, 0, 0, 0, 0xff0000);
+    r.arm_base = addBox("dynamic", world, r.mast.m, 0, 0, arm_w*4, r.mast.w*Math.sqrt(2), r.mast.w*Math.sqrt(2));
+    r.shoulder = addBox("dynamic", world, r.arm_base.m, 0, 0, arm_w, arm_w, 0.4);
+    r.elbow = addBox("dynamic", world, r.shoulder.m, 0, 0, arm_w, arm_w, 0.2);
+    r.forearm = addBox("dynamic", world, r.elbow.m, 0, 0, arm_w, arm_w, 0.2);
+    r.wrist = addBox("dynamic", world, r.forearm.m, 0, 0, arm_w, arm_w, 0.1);
+    r.g3 = addBox("position", world, r.wrist.m, 0, 0, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
+    r.g1 = addBox("dynamic", world, r.g3.m, 0, 0, 0.01, arm_w, 0.1);
+    r.g2 = addBox("dynamic", world, r.g3.m, 0, 0, 0.01, arm_w, 0.1);
+    r.g3.m.position.set(0.5, 0.5, 0.5);
 
-    let shoulder_l = 0.4;
-
-    let elbow_l = 0.2;
-    let forearm_l = 0.2;
-    let wrist_l = 0.1;
-    let g3_l = 0.02;
-    let g1_l = 0.1;
-    let m = 0;
-
-    robot.base = addBox("position", world, scene, 0, 0, base_w, base_h, base_w);
-    robot.mast = addBox("dynamic", world, robot.base.m, 0, 0, mast_w, mast_h, mast_w);// 0, mast_h/2+base_h, 0);
-    robot.indicator = addBox("dynamic", world, robot.base.m, 0, 0, 0.02, 0.02, 0.02, 0, 0, 0, 0xff0000);
-    robot.arm_base = addBox("dynamic", world, robot.mast.m, 0, 0, arm_base_w, arm_base_h, arm_base_d);
-    robot.shoulder = addBox("dynamic", world, robot.arm_base.m, 0, 0, arm_w, arm_w, shoulder_l);
-    robot.elbow = addBox("dynamic", world, robot.shoulder.m, 0, 0, arm_w, arm_w, elbow_l);
-    robot.forearm = addBox("dynamic", world, robot.elbow.m, 0, 0, arm_w, arm_w, forearm_l);
-    robot.wrist = addBox("dynamic", world, robot.forearm.m, 0, 0, arm_w, arm_w, wrist_l);
-    robot.g3 = addBox("position", world, robot.wrist.m, 0, 0, 0.12, arm_w, g3_l, 0.5, 0.5, 0.5);
-    robot.g1 = addBox("dynamic", world, robot.g3.m, 0, 0, 0.01, arm_w, g1_l);
-    robot.g2 = addBox("dynamic", world, robot.g3.m, 0, 0, 0.01, arm_w, g1_l);
-    robot.g3.m.position.set(0.5, 0.5, 0.5);
-
-    parts.push(robot.base, robot.mast, robot.indicator, robot.arm_base, robot.shoulder,
-        robot.elbow, robot.forearm, robot.wrist, robot.g1, robot.g2, robot.g3);
+    parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
+        r.elbow, r.forearm, r.wrist, r.g1, r.g2, r.g3);
 
     let x = {x: 1.0, y: 0.0, z: 0.0};
     let y = {x: 0.0, y: 1.0, z: 0.0};
     let z = {x: 0.0, y: 0.0, z: 1.0};
 
-    let j0 = fixedJoint(robot.base.r, robot.mast.r, 0, base_h/2, 0, 0, -mast_h/2, 0);
-    let ji = fixedJoint(robot.base.r, robot.indicator.r, 0, base_h/2, base_w/2);
-    let j1 = revoluteJoint(robot.mast.r, robot.arm_base.r, y, 0, 0, 0, -arm_w*0.75, 0, 0);
-    let j2 = revoluteJoint(robot.arm_base.r, robot.shoulder.r, x, arm_base_w/2, 0, 0, -arm_w/2, 0, -shoulder_l/2);
-    let j3 = revoluteJoint(robot.shoulder.r, robot.elbow.r, x,  -arm_w/2, 0, shoulder_l/2-arm_w/2,  arm_w/2, 0, -elbow_l/2);
-    let j4 = revoluteJoint(robot.elbow.r, robot.forearm.r, z, 0, 0, elbow_l/2, 0, 0, -forearm_l/2);
-    let j5 = revoluteJoint(robot.forearm.r, robot.wrist.r, x, arm_w/2, 0, forearm_l/2-arm_w/2, -arm_w/2, 0, -wrist_l/2);
-    let j6 = revoluteJoint(robot.wrist.r, robot.g3.r, z, 0, 0, wrist_l/2, 0, 0, -g3_l/2);
-    let j7 = fixedJoint(robot.g3.r, robot.g1.r, 0, 0, g3_l/2, 0.035, 0, -g1_l/2);
-    let j8 = fixedJoint(robot.g3.r, robot.g2.r, 0, 0, g3_l/2, -0.035, 0, -g1_l/2);
+    let j0 = fixedJoint(r.base.r, r.mast.r, 0, r.base.h/2, 0, 0, -r.mast.h/2, 0);
+    let ji = fixedJoint(r.base.r, r.indicator.r, 0, r.base.h/2, r.base.w/2);
+    let j1 = revoluteJoint(r.mast.r, r.arm_base.r, y, 0, 0, 0, -arm_w*0.75, 0, 0);
+    let j2 = revoluteJoint(r.arm_base.r, r.shoulder.r, x, r.arm_base.w/2, 0, 0, -arm_w/2, 0, -r.shoulder.d/2);
+    let j3 = revoluteJoint(r.shoulder.r, r.elbow.r, x,  -arm_w/2, 0, r.shoulder.d/2-arm_w/2,  arm_w/2, 0, -r.elbow.d/2);
+    let j4 = revoluteJoint(r.elbow.r, r.forearm.r, z, 0, 0, r.elbow.d/2, 0, 0, -r.forearm.d/2);
+    let j5 = revoluteJoint(r.forearm.r, r.wrist.r, x, arm_w/2, 0, r.forearm.d/2-arm_w/2, -arm_w/2, 0, -r.wrist.d/2);
+    let j6 = revoluteJoint(r.wrist.r, r.g3.r, z, 0, 0, r.wrist.d/2, 0, 0, -r.g3.d/2);
+    let j7 = prismaticJoint(r.g3.r, r.g1.r, x, -0.05, 0, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2);
+    let j8 = prismaticJoint(r.g3.r, r.g2.r, x, 0, 0.05, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2);
 
+    joints.push(j0, j1, j2, j3, j4, j5, j6, j7, j8);
     j1.setContactsEnabled(false);
     ji.setContactsEnabled(false);
-    robot.base.r.setNextKinematicTranslation({x: 0, y: base_h/2, z: 0}, true);
 
-    // robot.base.m.add(pointer_target);
-    // pointer_target.position.set(0.5, 0.5, 0.5);
-    //
-    // transform_ctrl = new TransformControls(camera, renderer.domElement);
-    // transform_ctrl.addEventListener('change', render);
-    // transform_ctrl.addEventListener('dragging-changed', function (event) {
-    //     controls.enabled = ! event.value;
-    // });
-    // transform_ctrl.size = 0.75
-    // transform_ctrl.setSpace("local");
-    // transform_ctrl.attach(pointer_target);
-    //
-    // scene.add(transform_ctrl);
+    joints[7].configureMotorVelocity(-gripper_v, gripper_s);
+    joints[8].configureMotorVelocity(gripper_v, gripper_s);
+
+    r.base.r.setNextKinematicTranslation({x: 0, y: r.base.h/2, z: 0}, true);
+    world.step(eventQueue);
+    r.base.r.recomputeMassPropertiesFromColliders();
+
+    r.base.m.add(pointer_target);
+    pointer_target.position.set(0.5, 0.5, 0.5);
+
+    transform_ctrl = new TransformControls(camera, renderer.domElement);
+    transform_ctrl.addEventListener('change', render);
+    transform_ctrl.addEventListener('dragging-changed', function (event) {
+        controls.enabled = ! event.value;
+    });
+    transform_ctrl.size = 0.75
+    transform_ctrl.setSpace("local");
+    transform_ctrl.attach(pointer_target);
+
+    scene.add(transform_ctrl);
 
 //==============================================================================
 
@@ -214,17 +215,16 @@ async function init() {
 
 let gripper_open = true;
 function toggleGripper() {
-    // if (gripper_open) {
-    //     // close
-    //     g1.position.set(-0.2, 0, -0.5);
-    //     g2.position.set(0.2, 0, -0.5);
-    // } else {
-    //     // open
-    //     g1.position.set(-0.4, 0, -0.5);
-    //     g2.position.set(0.4, 0, -0.5);
-    // }
-    // gripper_open = !gripper_open;
-    // console.log("toggleGripper");
+    if (gripper_open) {
+        // close
+        joints[7].configureMotorVelocity(gripper_v, gripper_s);
+        joints[8].configureMotorVelocity(-gripper_v, gripper_s);
+    } else {
+        // open
+        joints[7].configureMotorVelocity(-gripper_v, gripper_s);
+        joints[8].configureMotorVelocity(gripper_v, gripper_s);
+    }
+    gripper_open = !gripper_open;
 }
 
 let iter = 0;
@@ -232,10 +232,6 @@ let iter = 0;
 function render() {
 
     world.step(eventQueue);
-
-    // eventQueue.drainCollisionEvents((handle1, handle2, started) => {
-    //     console.log("collision", handle1, handle2, started, g1.body, g2.body);
-    // });
 
     for (let i = 0; i < boxes.length; i++) {
         let p = boxes[i].rigidBody.translation();
@@ -271,12 +267,14 @@ function render() {
         parts[i].m.updateWorldMatrix(true, true);
     }
 
-    // let p = new THREE.Vector3();
-    // let q = new THREE.Quaternion();
-    // pointer_target.getWorldPosition(p);
-    // pointer_target.getWorldQuaternion(q);
-    // robot.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    // robot.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    let p = new THREE.Vector3();
+    let q = new THREE.Quaternion();
+    pointer_target.getWorldPosition(p);
+    pointer_target.getWorldQuaternion(q);
+    r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    world.step(eventQueue);
+    r.g3.r.recomputeMassPropertiesFromColliders();
+    r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
     renderer.render(scene, camera);
 }
@@ -288,7 +286,7 @@ function onWindowResize() {
     render();
 }
 
-window.addEventListener( 'keydown', function ( event ) {
+window.addEventListener('keydown', function(event) {
 
     let p = new THREE.Vector3();
     let angle = 0;
@@ -313,38 +311,28 @@ window.addEventListener( 'keydown', function ( event ) {
             update_position = true;
             break;
         case "KeyA":
-            angle = 20;
+            angle = 5;
             update_rotation = true;
             break;
         case "KeyD":
-            angle = -20;
+            angle = -5;
             update_rotation = true;
             break;
-
     }
 
     if (update_position) {
-        p.applyQuaternion(robot.base.m.quaternion);
-        p.add(robot.base.m.position);
-        robot.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+        p.applyQuaternion(r.base.m.quaternion);
+        p.add(r.base.m.position);
+        r.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
         world.step(eventQueue);
-        robot.base.r.recomputeMassPropertiesFromColliders();
+        r.base.r.recomputeMassPropertiesFromColliders();
     }
 
     if (update_rotation) {
         angle = THREE.MathUtils.degToRad(angle);
         let q = new THREE.Quaternion();
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-        q.multiply(robot.base.m.quaternion);
-        // robot.base.r.resetForces();
-        // robot.base.r.resetTorques();
-        // robot.base.r.recomputeMassPropertiesFromColliders();
-        robot.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-        // robot.base.r.setRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-        // world.step(eventQueue);
-        // world.step(eventQueue);
-        // for (let i = 0; i < 50; i++) {
-        //     world.step(eventQueue);
-        // }
+        q.multiply(r.base.m.quaternion);
+        r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
-} );
+});
