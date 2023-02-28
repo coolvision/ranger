@@ -31,12 +31,12 @@ let boxes = [];
 let r = {};
 let parts = [];
 let joints = [];
-let gripper_v = 0.2;
-let gripper_s = 100;
+let gripper_v = 1;
+let gripper_s = 1;
 
 await init();
 
-function addBox(type, world, scene, g, m, width, height, depth, x=0, y=0, z=0, color=0x333333) {
+function addBox(type, world, scene, g, m, f, width, height, depth, x=0, y=0, z=0, color=0x333333) {
 
     let body_desc;
     if (type == "position") {
@@ -45,6 +45,9 @@ function addBox(type, world, scene, g, m, width, height, depth, x=0, y=0, z=0, c
         body_desc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
     }
 
+    // body_desc.setCcdEnabled(true);
+    // body_desc.setCanSleep(false);
+
     let rigid_body = world.createRigidBody(body_desc);
 
     rigid_body.setAdditionalMass(m);
@@ -52,6 +55,12 @@ function addBox(type, world, scene, g, m, width, height, depth, x=0, y=0, z=0, c
     rigid_body.setAngularDamping(100);
 
     let collider = RAPIER.ColliderDesc.cuboid(width/2, height/2, depth/2);
+    if (f > 0) {
+        collider.setFriction(f)
+        collider.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
+    }
+
+
     world.createCollider(collider, rigid_body);
 
     let geometry = new THREE.BoxGeometry(width, height, depth);
@@ -117,21 +126,21 @@ async function init() {
     // Create the ground
     let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 1, 10.0);
     groundColliderDesc.setTranslation(0, -1, 0);
-    groundColliderDesc.setFriction(0);
+    // groundColliderDesc.setFriction(0);
     world.createCollider(groundColliderDesc);
 
     let arm_w = 0.05;
-    r.base = addBox("position", world, scene, 0, 0, 0.4, 0.15, 0.4);
-    r.mast = addBox("dynamic", world, r.base.m, 0, 0, 0.075, 1.5, 0.075);
-    r.indicator = addBox("dynamic", world, r.base.m, 0, 0, 0.02, 0.02, 0.02, 0, 0, 0, 0xff0000);
-    r.arm_base = addBox("dynamic", world, r.mast.m, 0, 0, arm_w*4, r.mast.w*Math.sqrt(2), r.mast.w*Math.sqrt(2));
-    r.shoulder = addBox("dynamic", world, r.arm_base.m, 0, 0, arm_w, arm_w, 0.4);
-    r.elbow = addBox("dynamic", world, r.shoulder.m, 0, 0, arm_w, arm_w, 0.2);
-    r.forearm = addBox("dynamic", world, r.elbow.m, 0, 0, arm_w, arm_w, 0.2);
-    r.wrist = addBox("dynamic", world, r.forearm.m, 0, 0, arm_w, arm_w, 0.1);
-    r.g3 = addBox("position", world, r.wrist.m, 0, 0, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
-    r.g1 = addBox("dynamic", world, r.g3.m, 0, 0, 0.01, arm_w, 0.1);
-    r.g2 = addBox("dynamic", world, r.g3.m, 0, 0, 0.01, arm_w, 0.1);
+    r.base = addBox("position", world, scene, 0, 0, -1, 0.4, 0.15, 0.4);
+    r.mast = addBox("dynamic", world, r.base.m, 0, 0, -1, 0.075, 1.5, 0.075);
+    r.indicator = addBox("dynamic", world, r.base.m, 0, 0, -1, 0.02, 0.02, 0.02, 0, 0, 0, 0xff0000);
+    r.arm_base = addBox("dynamic", world, r.mast.m, 0, 0, -1, arm_w*4, r.mast.w*Math.sqrt(2), r.mast.w*Math.sqrt(2));
+    r.shoulder = addBox("dynamic", world, r.arm_base.m, 0, 0, -1, arm_w, arm_w, 0.4);
+    r.elbow = addBox("dynamic", world, r.shoulder.m, 0, 0, -1, arm_w, arm_w, 0.2);
+    r.forearm = addBox("dynamic", world, r.elbow.m, 0, 0, -1, arm_w, arm_w, 0.2);
+    r.wrist = addBox("dynamic", world, r.forearm.m, 0, 0, -1, arm_w, arm_w, 0.1);
+    r.g3 = addBox("position", world, r.wrist.m, 0, 0, -1, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
+    r.g1 = addBox("dynamic", world, r.g3.m, 0, 0, -1, 0.025, 0.025, 0.1);
+    r.g2 = addBox("dynamic", world, r.g3.m, 0, 0, -1, 0.025, 0.025, 0.1);
     r.g3.m.position.set(0.5, 0.5, 0.5);
 
     parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
@@ -176,6 +185,33 @@ async function init() {
     transform_ctrl.attach(pointer_target);
 
     scene.add(transform_ctrl);
+
+    let size = 0.5
+    for (let i = 0; i < 5; i++) {
+        let p = new THREE.Vector3(Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5);
+        p.multiplyScalar(5);
+        let c = new THREE.Color();
+        c.setHex(0xffffff * Math.random());
+        let box = addBox("dynamic", world, scene, 1, 0, -1, size, size, size, p.x, p.y, p.z, c);
+        boxes.push(box);
+    }
+
+    for (let i = 0; i < 100; i++) {
+        world.step(eventQueue);
+    }
+
+    size = 0.05;
+    for (let i = 0; i < 500; i++) {
+        let p = new THREE.Vector3(Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5);
+        p.multiplyScalar(5);
+        let c = new THREE.Color();
+        c.setHex(0xffffff * Math.random());
+        let box = addBox("dynamic", world, scene, 1, 0, -1, size, size, size, p.x, p.y, p.z, c);
+        boxes.push(box);
+    }
+
+
+
 
 //==============================================================================
 
@@ -231,13 +267,13 @@ let iter = 0;
 
 function render() {
 
-    world.step(eventQueue);
+    // world.step(eventQueue);
 
     for (let i = 0; i < boxes.length; i++) {
-        let p = boxes[i].rigidBody.translation();
-        let q = boxes[i].rigidBody.rotation();
-        boxes[i].position.set(p.x, p.y, p.z);
-        boxes[i].quaternion.set(q.x, q.y, q.z, q.w);
+        let p = boxes[i].r.translation();
+        let q = boxes[i].r.rotation();
+        boxes[i].m.position.set(p.x, p.y, p.z);
+        boxes[i].m.quaternion.set(q.x, q.y, q.z, q.w);
     }
 
     for (let i in parts) {
