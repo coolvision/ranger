@@ -34,6 +34,11 @@ let joints = [];
 let gripper_v = 100;
 let gripper_s = 100;
 let gripper_f = 100;
+let gripper_d = 10;
+let gripper_open_1 = -0.05;
+let gripper_closed_1 = -0.01;
+let gripper_open_2 = 0.05;
+let gripper_closed_2 = 0.01;
 
 let platform, gripper;
 
@@ -164,8 +169,28 @@ async function init() {
     r.g2 = addBody("dynamic", "cuboid", world, r.g3.m, 1, 0, gripper_f, 0.02, 0.02, 0.1);
     r.g3.m.position.set(0.5, 0.5, 0.5);
 
+    r.g1.cd2 = RAPIER.ColliderDesc.cuboid(0.005, r.g1.h/2, r.g1.d/2)
+        .setTranslation(r.g1.w/2, 0.0, 0.0)
+        .setSensor(true);
+    // r.g1.cd2.setFriction(gripper_f)
+    // r.g1.cd2.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
+    r.g1.c2 = world.createCollider(r.g1.cd2, r.g1.r);
+
+    r.g2.cd2 = RAPIER.ColliderDesc.cuboid(0.005, r.g2.h/2, r.g2.d/2)
+        .setTranslation(-r.g2.w/2, 0.0, 0.0)
+        .setSensor(true);
+    // r.g2.cd2.setFriction(gripper_f)
+    // r.g2.cd2.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
+    r.g2.c2 = world.createCollider(r.g2.cd2, r.g2.r);
+
+
+
     // r.g1.r.setAngularDamping(1000);
     // r.g2.r.setAngularDamping(1000);
+    // r.g1.c.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+    // r.g2.c.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+    // r.g1.c2.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+    // r.g2.c2.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
 
     parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
@@ -183,8 +208,8 @@ async function init() {
     let j4 = revoluteJoint(r.elbow.r, r.forearm.r, z, 0, 0, r.elbow.d/2, 0, 0, -r.forearm.d/2);
     let j5 = revoluteJoint(r.forearm.r, r.wrist.r, x, arm_w/2, 0, r.forearm.d/2-arm_w/2, -arm_w/2, 0, -r.wrist.d/2);
     let j6 = revoluteJoint(r.wrist.r, r.g3.r, z, 0, 0, r.wrist.d/2, 0, 0, -r.g3.d/2);
-    let j7 = prismaticJoint(r.g3.r, r.g1.r, x, -0.05, -0.01, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
-    let j8 = prismaticJoint(r.g3.r, r.g2.r, x, 0.01, 0.05, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
+    let j7 = prismaticJoint(r.g3.r, r.g1.r, x, -0.05, -0.02, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
+    let j8 = prismaticJoint(r.g3.r, r.g2.r, x, 0.02, 0.05, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
 
     joints.push(j0, j1, j2, j3, j4, j5, j6, j7, j8);
     j1.setContactsEnabled(false);
@@ -192,10 +217,11 @@ async function init() {
 
     // joints[7].configureMotorModel(1);
     // joints[8].configureMotorModel(1);
-
     joints[7].configureMotorVelocity(-gripper_v, gripper_s);
     joints[8].configureMotorVelocity(gripper_v, gripper_s);
 
+    // joints[7].configureMotorPosition(gripper_open_1, gripper_s, gripper_d);
+    // joints[8].configureMotorPosition(gripper_open_2, gripper_s, gripper_d)
 
     r.base.r.setNextKinematicTranslation({x: 0, y: r.base.h/2, z: 0}, true);
     world.step(eventQueue);
@@ -317,6 +343,10 @@ let iter = 0;
 function render() {
 
     // world.step(eventQueue);
+    eventQueue.drainCollisionEvents((handle1, handle2, started) => {
+        console.log("collision", handle1, handle2, started);
+    });
+
 
     for (let i = 0; i < boxes.length; i++) {
         let p = boxes[i].r.translation();
