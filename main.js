@@ -172,9 +172,13 @@ async function init() {
     r.forearm = addBody("dynamic", "cuboid", world, r.elbow.m, 0, 0, -1, arm_w, arm_w, 0.2);
     r.wrist = addBody("dynamic", "cuboid", world, r.forearm.m, 0, 0, -1, arm_w, arm_w, 0.1);
     r.g3 = addBody("position", "cuboid", world, r.wrist.m, 0, 0, -1, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
-    r.g1 = addBody("dynamic", "cuboid", world, r.g3.m, 1, 0.001, gripper_f, 0.02, 0.02, 0.1);
-    r.g2 = addBody("dynamic", "cuboid", world, r.g3.m, 1, 0.001, gripper_f, 0.02, 0.02, 0.1);
+    r.g1 = addBody("dynamic", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
+    r.g2 = addBody("dynamic", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
     r.g3.m.position.set(0.5, 0.5, 0.5);
+
+    // r.g1.r.setLinearDamping(100);
+    // r.g2.r.setLinearDamping(100);
+
 
     r.g1.cd2 = RAPIER.ColliderDesc.cuboid(0.01, r.g1.h/8, r.g1.d/8)
         .setTranslation(r.g1.w/2, 0.0, 0.0)
@@ -416,6 +420,10 @@ function render() {
     r.g3.r.recomputeMassPropertiesFromColliders();
     r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
+    // for (let i = 0; i < 10; i++) {
+    //     world.step(eventQueue);
+    // }
+
     renderer.render(scene, camera);
 }
 
@@ -436,6 +444,12 @@ window.addEventListener('keydown', function(event) {
 
     switch ( event.code ) {
 
+        case "KeyT":
+            transform_ctrl.setMode('translate');
+            break;
+        case "KeyR":
+            transform_ctrl.setMode('rotate');
+            break;
         case "KeyZ":
             world.step(eventQueue);
             break;
@@ -475,4 +489,8 @@ window.addEventListener('keydown', function(event) {
         q.multiply(r.base.m.quaternion);
         r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
+
+    // for (let i = 0; i < 10; i++) {
+    //     world.step(eventQueue);
+    // }
 });
