@@ -44,6 +44,29 @@ let platform, gripper;
 
 await init();
 
+function getColliderDesc(world, scene, f, width, height, depth, color=0x333333) {
+
+    let collider_desc = RAPIER.ColliderDesc.cuboid(width/2, height/2, depth/2);
+    if (f > 0) {
+        collider_desc.setFriction(f)
+        collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
+    }
+
+    let geometry = new THREE.BoxGeometry(width, height, depth);
+    let mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: color}));
+
+    scene.add(mesh);
+
+    return {
+        cd: collider_desc,
+        m: mesh,
+        i: mesh.geometry.parameters,
+        w: width,
+        h: height,
+        d: depth
+    }
+}
+
 function addBody(type, shape, world, scene, g, m, f, width, height, depth, x=0, y=0, z=0, color=0x333333) {
 
     let body_desc;
@@ -61,43 +84,15 @@ function addBody(type, shape, world, scene, g, m, f, width, height, depth, x=0, 
     rigid_body.setAdditionalMass(m);
     rigid_body.setGravityScale(g);
     rigid_body.setAngularDamping(100);
-    // rigid_body.setDominanceGroup(0);
 
-    let collider_desc;
-    if (shape == 'cylinder') {
-        collider_desc = RAPIER.ColliderDesc.cylinder(depth/2, width/2);
-    } else {
-        collider_desc = RAPIER.ColliderDesc.cuboid(width/2, height/2, depth/2);
-    }
-
-    if (f > 0) {
-        collider_desc.setFriction(f)
-        collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
-    }
-
-    let collider = world.createCollider(collider_desc, rigid_body);
-    if (shape == 'cylinder') {
-        let q = new THREE.Quaternion();
-        q.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI/2);
-        collider.setRotationWrtParent({w: q.w, x: q.x, y: q.y, z: q.z});
-    }
-
-
-    // collider_desc.setDensity(1);
-    console.log("mass", type, collider.mass(), collider.density());
-
-
-
-    let geometry = new THREE.BoxGeometry(width, height, depth);
-    let mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: color}));
-
-    scene.add(mesh);
+    let cd = getColliderDesc(world, scene, f, width, height, depth, color);
+    let collider = world.createCollider(cd.cd, rigid_body);
 
     return {
         r: rigid_body,
         c: collider,
-        m: mesh,
-        i: mesh.geometry.parameters,
+        m: cd.m,
+        i: cd.m.geometry.parameters,
         t: type,
         w: width,
         h: height,
@@ -172,48 +167,29 @@ async function init() {
     r.forearm = addBody("dynamic", "cuboid", world, r.elbow.m, 0, 0, -1, arm_w, arm_w, 0.2);
     r.wrist = addBody("dynamic", "cuboid", world, r.forearm.m, 0, 0, -1, arm_w, arm_w, 0.1);
     r.g3 = addBody("position", "cuboid", world, r.wrist.m, 0, 0, -1, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
-    r.g1 = addBody("dynamic", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
-    r.g2 = addBody("dynamic", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
     r.g3.m.position.set(0.5, 0.5, 0.5);
 
-    // r.g1.r.setLinearDamping(100);
-    // r.g2.r.setLinearDamping(100);
+    // r.g1 = addBody("-", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
+    // r.g2 = addBody("-", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
+    // parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
+    //     r.elbow, r.forearm, r.wrist, r.g1, r.g2, r.g3);
 
+    // r.g1 = getColliderDesc(world, r.g3.m, gripper_f, 0.01, 0.05, 0.1);
+    // r.g2 = getColliderDesc(world, r.g3.m, gripper_f, 0.01, 0.05, 0.1);
+    // r.g1.c = world.createCollider(r.g1.cd);
+    // r.g2.c = world.createCollider(r.g2.cd);
+    // r.g1.m.position.set(-0.05, 0, r.g1.d/2);
+    // r.g2.m.position.set(0.05, 0, r.g2.d/2);
 
-    r.g1.cd2 = RAPIER.ColliderDesc.cuboid(0.01, r.g1.h/8, r.g1.d/8)
-        .setTranslation(r.g1.w/2, 0.0, 0.0)
-        .setSensor(true)
-        // .setDensity(100)
-        .setMass(0.005)
-    // r.g1.cd2.setFriction(gripper_f)
-    // r.g1.cd2.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
-    // r.g1.c2 = world.createCollider(r.g1.cd2, r.g1.r);
-
-    r.g2.cd2 = RAPIER.ColliderDesc.cuboid(0.01, r.g2.h/8, r.g2.d/8)
-        .setTranslation(-r.g2.w/2, 0.0, 0.0)
-        .setSensor(true)
-        // .setDensity(100)
-        .setMass(0.005)
-
-        // .setMass(0.01)
-    // r.g2.cd2.setFriction(gripper_f)
-    // r.g2.cd2.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
-    // r.g2.c2 = world.createCollider(r.g2.cd2, r.g2.r);
-
-    // console.log("g1 c2 mass", r.g1.c2.mass(), r.g1.c2.density());
-    // console.log("g2 c2 mass", r.g2.c2.mass(), r.g2.c2.density());
-
-
-    // r.g1.r.setAngularDamping(1000);
-    // r.g2.r.setAngularDamping(1000);
-    // r.g1.c.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
-    // r.g2.c.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
-    // r.g1.c2.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
-    // r.g2.c2.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+    r.g1 = addBody("position", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.01, 0.05, 0.1);
+    r.g2 = addBody("position", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.01, 0.05, 0.1);
+    r.g1.m.position.set(-0.05, 0, r.g1.d/2);
+    r.g2.m.position.set(0.05, 0, r.g2.d/2);
 
 
     parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
-        r.elbow, r.forearm, r.wrist, r.g1, r.g2, r.g3);
+        r.elbow, r.forearm, r.wrist, r.g3);
+
 
     let x = {x: 1.0, y: 0.0, z: 0.0};
     let y = {x: 0.0, y: 1.0, z: 0.0};
@@ -227,17 +203,17 @@ async function init() {
     let j4 = revoluteJoint(r.elbow.r, r.forearm.r, z, 0, 0, r.elbow.d/2, 0, 0, -r.forearm.d/2);
     let j5 = revoluteJoint(r.forearm.r, r.wrist.r, x, arm_w/2, 0, r.forearm.d/2-arm_w/2, -arm_w/2, 0, -r.wrist.d/2);
     let j6 = revoluteJoint(r.wrist.r, r.g3.r, z, 0, 0, r.wrist.d/2, 0, 0, -r.g3.d/2);
-    let j7 = prismaticJoint(r.g3.r, r.g1.r, x, -0.05, -0.02, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
-    let j8 = prismaticJoint(r.g3.r, r.g2.r, x, 0.02, 0.05, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
+    // let j7 = prismaticJoint(r.g3.r, r.g1.r, x, -0.05, -0.02, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
+    // let j8 = prismaticJoint(r.g3.r, r.g2.r, x, 0.02, 0.05, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
 
-    joints.push(j0, j1, j2, j3, j4, j5, j6, j7, j8);
+    joints.push(j0, j1, j2, j3, j4, j5, j6);
     j1.setContactsEnabled(false);
     ji.setContactsEnabled(false);
 
     // joints[7].configureMotorModel(1);
     // joints[8].configureMotorModel(1);
-    joints[7].configureMotorVelocity(-gripper_v, gripper_s);
-    joints[8].configureMotorVelocity(gripper_v, gripper_s);
+    // joints[7].configureMotorVelocity(-gripper_v, gripper_s);
+    // joints[8].configureMotorVelocity(gripper_v, gripper_s);
 
     // joints[7].configureMotorPosition(gripper_open_1, gripper_s, gripper_d);
     // joints[8].configureMotorPosition(gripper_open_2, gripper_s, gripper_d)
@@ -347,12 +323,12 @@ let gripper_open = true;
 function toggleGripper() {
     if (gripper_open) {
         // close
-        joints[7].configureMotorVelocity(gripper_v, gripper_s);
-        joints[8].configureMotorVelocity(-gripper_v, gripper_s);
+        // joints[7].configureMotorVelocity(gripper_v, gripper_s);
+        // joints[8].configureMotorVelocity(-gripper_v, gripper_s);
     } else {
         // open
-        joints[7].configureMotorVelocity(-gripper_v, gripper_s);
-        joints[8].configureMotorVelocity(gripper_v, gripper_s);
+        // joints[7].configureMotorVelocity(-gripper_v, gripper_s);
+        // joints[8].configureMotorVelocity(gripper_v, gripper_s);
     }
     gripper_open = !gripper_open;
 }
@@ -365,6 +341,24 @@ function render() {
     eventQueue.drainCollisionEvents((handle1, handle2, started) => {
         console.log("collision", handle1, handle2, started);
     });
+
+    let p = new THREE.Vector3();
+    let q = new THREE.Quaternion();
+    pointer_target.getWorldPosition(p);
+    pointer_target.getWorldQuaternion(q);
+
+    // console.log("pointer_target", p)
+
+    let t = {x: p.x, y: p.y, z: p.z};
+    gripper.computeColliderMovement(r.g3.c, t);
+    let p1 = gripper.computedMovement();
+
+    // console.log("computedMovement", t, p1)
+    // r.g3.r.setNextKinematicTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
+    r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    world.step(eventQueue);
+    r.g3.r.recomputeMassPropertiesFromColliders();
+    r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
 
     for (let i = 0; i < boxes.length; i++) {
@@ -401,24 +395,16 @@ function render() {
         parts[i].m.updateWorldMatrix(true, true);
     }
 
-    let p = new THREE.Vector3();
-    let q = new THREE.Quaternion();
-    pointer_target.getWorldPosition(p);
-    pointer_target.getWorldQuaternion(q);
-
-    // console.log("pointer_target", p)
-
-
-    let t = {x: p.x, y: p.y, z: p.z};
-    gripper.computeColliderMovement(r.g3.c, t);
-    let p1 = gripper.computedMovement();
-
-    // console.log("computedMovement", t, p1)
-    // r.g3.r.setNextKinematicTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
-    r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    r.g1.m.getWorldPosition(p);
+    r.g1.m.getWorldQuaternion(q);
+    // r.g1.c.setTranslation({x: p.x, y: p.y, z: p.z});
+    // r.g1.c.setRotation({w: q.x, x: q.x, y: q.y, z: q.z});
+    r.g1.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     world.step(eventQueue);
-    r.g3.r.recomputeMassPropertiesFromColliders();
-    r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    r.g1.r.recomputeMassPropertiesFromColliders();
+    r.g1.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
+
 
     // for (let i = 0; i < 10; i++) {
     //     world.step(eventQueue);
