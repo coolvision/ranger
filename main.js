@@ -36,9 +36,11 @@ let gripper_s = 10;
 let gripper_f = 100;
 let gripper_d = 10;
 let gripper_open_1 = -0.05;
-let gripper_closed_1 = -0.01;
+let gripper_closed_1 = -0.005;
 let gripper_open_2 = 0.05;
-let gripper_closed_2 = 0.01;
+let gripper_closed_2 = 0.005;
+
+let gripper_open = true;
 
 let platform, gripper;
 
@@ -166,7 +168,7 @@ async function init() {
     r.elbow = addBody("dynamic", "cuboid", world, r.shoulder.m, 0, 0, -1, arm_w, arm_w, 0.2);
     r.forearm = addBody("dynamic", "cuboid", world, r.elbow.m, 0, 0, -1, arm_w, arm_w, 0.2);
     r.wrist = addBody("dynamic", "cuboid", world, r.forearm.m, 0, 0, -1, arm_w, arm_w, 0.1);
-    r.g3 = addBody("position", "cuboid", world, r.wrist.m, 0, 0, -1, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
+    r.g3 = addBody("position", "cuboid", world, scene, 0, 0, -1, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
     r.g3.m.position.set(0.5, 0.5, 0.5);
 
     // r.g1 = addBody("-", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
@@ -319,7 +321,6 @@ async function init() {
     renderer.setAnimationLoop(render);
 }
 
-let gripper_open = true;
 function toggleGripper() {
     if (gripper_open) {
         // close
@@ -342,23 +343,15 @@ function render() {
         console.log("collision", handle1, handle2, started);
     });
 
-    let p = new THREE.Vector3();
-    let q = new THREE.Quaternion();
-    pointer_target.getWorldPosition(p);
-    pointer_target.getWorldQuaternion(q);
 
     // console.log("pointer_target", p)
 
-    let t = {x: p.x, y: p.y, z: p.z};
-    gripper.computeColliderMovement(r.g3.c, t);
-    let p1 = gripper.computedMovement();
+    // let t = {x: p.x, y: p.y, z: p.z};
+    // gripper.computeColliderMovement(r.g3.c, t);
+    // let p1 = gripper.computedMovement();
 
     // console.log("computedMovement", t, p1)
     // r.g3.r.setNextKinematicTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
-    r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    world.step(eventQueue);
-    r.g3.r.recomputeMassPropertiesFromColliders();
-    r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
 
     for (let i = 0; i < boxes.length; i++) {
@@ -395,15 +388,47 @@ function render() {
         parts[i].m.updateWorldMatrix(true, true);
     }
 
+    let gp1 = r.g1.m.position.clone();
+    let gp2 = r.g2.m.position.clone();
+    if (gripper_open) {
+        if (gp1.x > gripper_open_1) {
+            r.g1.m.position.set(gp1.x-0.001, gp1.y, gp1.z);
+        }
+        if (gp2.x < gripper_open_2) {
+            r.g2.m.position.set(gp2.x+0.001, gp2.y, gp2.z);
+        }
+    } else {
+        if (gp1.x < gripper_closed_1) {
+            r.g1.m.position.set(gp1.x+0.001, gp1.y, gp1.z);
+        }
+        if (gp2.x > gripper_closed_2) {
+            r.g2.m.position.set(gp2.x-0.001, gp2.y, gp2.z);
+        }
+    }
+
+    let p = new THREE.Vector3();
+    let q = new THREE.Quaternion();
+    pointer_target.getWorldPosition(p);
+    pointer_target.getWorldQuaternion(q);
+
+    r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    world.step(eventQueue);
+    r.g3.r.recomputeMassPropertiesFromColliders();
+    r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
     r.g1.m.getWorldPosition(p);
     r.g1.m.getWorldQuaternion(q);
-    // r.g1.c.setTranslation({x: p.x, y: p.y, z: p.z});
-    // r.g1.c.setRotation({w: q.x, x: q.x, y: q.y, z: q.z});
     r.g1.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     world.step(eventQueue);
     r.g1.r.recomputeMassPropertiesFromColliders();
     r.g1.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
+    r.g2.m.getWorldPosition(p);
+    r.g2.m.getWorldQuaternion(q);
+    r.g2.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    world.step(eventQueue);
+    r.g2.r.recomputeMassPropertiesFromColliders();
+    r.g2.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
 
     // for (let i = 0; i < 10; i++) {
