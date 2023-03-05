@@ -32,7 +32,7 @@ let r = {};
 let parts = [];
 let joints = [];
 let gripper_v = 10;
-let gripper_s = 10;
+let gripper_s = 0.005;
 let gripper_f = 100;
 let gripper_d = 10;
 let gripper_open_1 = -0.05;
@@ -183,11 +183,13 @@ async function init() {
     // r.g1.m.position.set(-0.05, 0, r.g1.d/2);
     // r.g2.m.position.set(0.05, 0, r.g2.d/2);
 
-    r.g1 = addBody("position", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.01, 0.05, 0.1);
-    r.g2 = addBody("position", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.01, 0.05, 0.1);
+    r.g1 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, 0.01, 0.05, 0.1);
+    r.g2 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, 0.01, 0.05, 0.1);
     r.g1.m.position.set(-0.05, 0, r.g1.d/2);
     r.g2.m.position.set(0.05, 0, r.g2.d/2);
 
+    r.g1.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
+    r.g2.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
 
     parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
         r.elbow, r.forearm, r.wrist, r.g3);
@@ -338,12 +340,6 @@ let iter = 0;
 
 function render() {
 
-    // world.step(eventQueue);
-    eventQueue.drainCollisionEvents((handle1, handle2, started) => {
-        console.log("collision", handle1, handle2, started);
-    });
-
-
     // console.log("pointer_target", p)
 
     // let t = {x: p.x, y: p.y, z: p.z};
@@ -388,23 +384,47 @@ function render() {
         parts[i].m.updateWorldMatrix(true, true);
     }
 
-    let gp1 = r.g1.m.position.clone();
-    let gp2 = r.g2.m.position.clone();
-    if (gripper_open) {
-        if (gp1.x > gripper_open_1) {
-            r.g1.m.position.set(gp1.x-0.001, gp1.y, gp1.z);
+    r.g1.c.v1 = r.g1.m.localToWorld(new THREE.Vector3(0, 0, 0));
+    r.g1.c.v2 = r.g1.m.localToWorld(new THREE.Vector3(-1, 0, 0));
+    r.g1.c.v = r.g1.c.v2.sub(r.g1.c.v1);
+
+    r.g2.c.v1 = r.g2.m.localToWorld(new THREE.Vector3(0, 0, 0));
+    r.g2.c.v2 = r.g2.m.localToWorld(new THREE.Vector3(-1, 0, 0));
+    r.g2.c.v = r.g2.c.v2.sub(r.g2.c.v1);
+
+    // eventQueue.drainCollisionEvents((handle1, handle2, started) => {
+    //     console.log("collision", handle1, handle2, started);
+    // });
+    eventQueue.drainContactForceEvents(event => {
+        let d = event.maxForceDirection();
+        let dv = new THREE.Vector3(d.x, d.y, d.z);
+        let c1 = world.getCollider(event.collider1());
+        let c2 = world.getCollider(event.collider2());
+        if (c1.v) {
+            console.log("c1.v", THREE.MathUtils.radToDeg(c1.v.angleTo(dv)));
+        } else if (c2.v) {
+            console.log("c2.v", THREE.MathUtils.radToDeg(c2.v.angleTo(dv)));
         }
-        if (gp2.x < gripper_open_2) {
-            r.g2.m.position.set(gp2.x+0.001, gp2.y, gp2.z);
-        }
-    } else {
-        if (gp1.x < gripper_closed_1) {
-            r.g1.m.position.set(gp1.x+0.001, gp1.y, gp1.z);
-        }
-        if (gp2.x > gripper_closed_2) {
-            r.g2.m.position.set(gp2.x-0.001, gp2.y, gp2.z);
-        }
-    }
+        // console.log("ContactForce", c1.v, c2.v, d);
+    });
+
+    // let gp1 = r.g1.m.position.clone();
+    // let gp2 = r.g2.m.position.clone();
+    // if (gripper_open) {
+    //     if (gp1.x > gripper_open_1) {
+    //         r.g1.m.position.set(gp1.x-gripper_s, gp1.y, gp1.z);
+    //     }
+    //     if (gp2.x < gripper_open_2) {
+    //         r.g2.m.position.set(gp2.x+gripper_s, gp2.y, gp2.z);
+    //     }
+    // } else {
+    //     if (gp1.x < gripper_closed_1) {
+    //         r.g1.m.position.set(gp1.x+gripper_s, gp1.y, gp1.z);
+    //     }
+    //     if (gp2.x > gripper_closed_2) {
+    //         r.g2.m.position.set(gp2.x-gripper_s, gp2.y, gp2.z);
+    //     }
+    // }
 
     let p = new THREE.Vector3();
     let q = new THREE.Quaternion();
@@ -416,20 +436,24 @@ function render() {
     r.g3.r.recomputeMassPropertiesFromColliders();
     r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
+
+    r.g1.m.updateWorldMatrix(true, true);
+    r.g2.m.updateWorldMatrix(true, true);
+
+    // let g0 = new THREE.Vector3(0, 0, 0);
+    // let gy1 = new THREE.Vector3(0, -1, 0);
+    // let gy2 = new THREE.Vector3(0, 1, 0);
+
+    // console.log("r.g1.c.v", r.g1.c.v, r.g2.c.v )
     r.g1.m.getWorldPosition(p);
     r.g1.m.getWorldQuaternion(q);
     r.g1.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    world.step(eventQueue);
-    r.g1.r.recomputeMassPropertiesFromColliders();
     r.g1.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
     r.g2.m.getWorldPosition(p);
     r.g2.m.getWorldQuaternion(q);
     r.g2.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    world.step(eventQueue);
-    r.g2.r.recomputeMassPropertiesFromColliders();
     r.g2.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-
 
     // for (let i = 0; i < 10; i++) {
     //     world.step(eventQueue);
@@ -453,8 +477,26 @@ window.addEventListener('keydown', function(event) {
     let update_position = false;
     let update_rotation = false;
 
-    switch ( event.code ) {
+    let gp1 = r.g1.m.position.clone();
+    let gp2 = r.g2.m.position.clone();
 
+    switch ( event.code ) {
+        case "KeyO":
+            if (gp1.x > gripper_open_1) {
+                r.g1.m.position.set(gp1.x-gripper_s, gp1.y, gp1.z);
+            }
+            if (gp2.x < gripper_open_2) {
+                r.g2.m.position.set(gp2.x+gripper_s, gp2.y, gp2.z);
+            }
+            break;
+        case "KeyP":
+            if (gp1.x < gripper_closed_1) {
+                r.g1.m.position.set(gp1.x+gripper_s, gp1.y, gp1.z);
+            }
+            if (gp2.x > gripper_closed_2) {
+                r.g2.m.position.set(gp2.x-gripper_s, gp2.y, gp2.z);
+            }
+            break;
         case "KeyT":
             transform_ctrl.setMode('translate');
             break;
