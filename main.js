@@ -39,10 +39,15 @@ let gripper_open_1 = -0.05;
 let gripper_closed_1 = -0.005;
 let gripper_open_2 = 0.05;
 let gripper_closed_2 = 0.005;
-
+let r_d = 100;
 let gripper_open = true;
 
 let platform, gripper;
+
+let init_position = new THREE.Vector3();
+let target_position = new THREE.Vector3();
+let init_rotation = new THREE.Quaternion();
+let target_rotation = new THREE.Quaternion();
 
 await init();
 
@@ -69,7 +74,7 @@ function getColliderDesc(world, scene, f, width, height, depth, color=0x333333) 
     }
 }
 
-function addBody(type, shape, world, scene, g, m, f, width, height, depth, x=0, y=0, z=0, color=0x333333) {
+function addBody(type, shape, world, scene, g, m, f, d, width, height, depth, x=0, y=0, z=0, color=0x333333) {
 
     let body_desc;
     if (type == "position") {
@@ -85,7 +90,7 @@ function addBody(type, shape, world, scene, g, m, f, width, height, depth, x=0, 
 
     rigid_body.setAdditionalMass(m);
     rigid_body.setGravityScale(g);
-    rigid_body.setAngularDamping(100);
+    rigid_body.setAngularDamping(d);
 
     let cd = getColliderDesc(world, scene, f, width, height, depth, color);
     let collider = world.createCollider(cd.cd, rigid_body);
@@ -160,15 +165,15 @@ async function init() {
     world.createCollider(groundColliderDesc);
 
     let arm_w = 0.05;
-    r.base = addBody("position", "cuboid", world, scene, 0, 0, -1, 0.4, 0.15, 0.4);
-    r.mast = addBody("dynamic", "cuboid", world, r.base.m, 0, 0, -1, 0.075, 1.5, 0.075);
-    r.indicator = addBody("dynamic", "cuboid", world, r.base.m, 0, 0, -1, 0.02, 0.02, 0.02, 0, 0, 0, 0xff0000);
-    r.arm_base = addBody("dynamic", "cuboid", world, r.mast.m, 0, 0, -1, arm_w*4, r.mast.w*Math.sqrt(2), r.mast.w*Math.sqrt(2));
-    r.shoulder = addBody("dynamic", "cuboid", world, r.arm_base.m, 0, 0, -1, arm_w, arm_w, 0.4);
-    r.elbow = addBody("dynamic", "cuboid", world, r.shoulder.m, 0, 0, -1, arm_w, arm_w, 0.2);
-    r.forearm = addBody("dynamic", "cuboid", world, r.elbow.m, 0, 0, -1, arm_w, arm_w, 0.2);
-    r.wrist = addBody("dynamic", "cuboid", world, r.forearm.m, 0, 0, -1, arm_w, arm_w, 0.1);
-    r.g3 = addBody("position", "cuboid", world, scene, 0, 0, -1, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
+    r.base = addBody("position", "cuboid", world, scene, 0, 0, -1, r_d, 0.4, 0.15, 0.4);
+    r.mast = addBody("dynamic", "cuboid", world, r.base.m, 0, 0, -1, r_d, 0.075, 1.5, 0.075);
+    r.indicator = addBody("dynamic", "cuboid", world, r.base.m, 0, 0, -1, r_d, 0.02, 0.02, 0.02, 0, 0, 0, 0xff0000);
+    r.arm_base = addBody("dynamic", "cuboid", world, r.mast.m, 0, 0, -1, r_d, arm_w*4, r.mast.w*Math.sqrt(2), r.mast.w*Math.sqrt(2));
+    r.shoulder = addBody("dynamic", "cuboid", world, r.arm_base.m, 0, 0, -1, r_d, arm_w, arm_w, 0.4);
+    r.elbow = addBody("dynamic", "cuboid", world, r.shoulder.m, 0, 0, -1, r_d, arm_w, arm_w, 0.2);
+    r.forearm = addBody("dynamic", "cuboid", world, r.elbow.m, 0, 0, -1, r_d, arm_w, arm_w, 0.2);
+    r.wrist = addBody("dynamic", "cuboid", world, r.forearm.m, 0, 0, -1, r_d, arm_w, arm_w, 0.1);
+    r.g3 = addBody("position", "cuboid", world, scene, 0, 0, -1, r_d, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
     r.g3.m.position.set(0.5, 0.5, 0.5);
 
     // r.g1 = addBody("-", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
@@ -183,15 +188,15 @@ async function init() {
     // r.g1.m.position.set(-0.05, 0, r.g1.d/2);
     // r.g2.m.position.set(0.05, 0, r.g2.d/2);
 
-    r.g1 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, 0.01, 0.05, 0.1);
-    r.g2 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, 0.01, 0.05, 0.1);
+    r.g1 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
+    r.g2 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
     r.g1.m.position.set(gripper_open_1, 0, r.g1.d/2);
     r.g2.m.position.set(gripper_open_2, 0, r.g2.d/2);
 
-    r.g1_pad = addBody("position", "cuboid", world, r.g1.m, 0, 0, gripper_f, 0.001, 0.05*0.9, 0.1*0.9);
-    r.g2_pad = addBody("position", "cuboid", world, r.g2.m, 0, 0, gripper_f, 0.001, 0.05*0.9, 0.1*0.9);
-    r.g1_pad.m.position.set(0.01/2+0.001/2, 0, 0);
-    r.g2_pad.m.position.set(-0.01/2-0.001/2, 0, 0);
+    r.g1_pad = addBody("position", "cuboid", world, r.g1.m, 0, 0, gripper_f, r_d, 0.001, 0.05*0.9, 0.1*0.9);
+    r.g2_pad = addBody("position", "cuboid", world, r.g2.m, 0, 0, gripper_f, r_d, 0.001, 0.05*0.9, 0.1*0.9);
+    r.g1_pad.m.position.set(0.01/2-0.001/2, 0, 0);
+    r.g2_pad.m.position.set(-0.01/2+0.001/2, 0, 0);
 
     r.g1_pad.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
     r.g2_pad.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
@@ -253,7 +258,7 @@ async function init() {
         let p = new THREE.Vector3(0, 1, 0.75);
         let c = new THREE.Color();
         c.setHex(0xffffff * Math.random());
-        let box = addBody("dynamic", "cuboid", world, scene, 1, 0, -1, size, size, size, p.x, p.y, p.z, c);
+        let box = addBody("dynamic", "cuboid", world, scene, 1, 0, -1, 100, size, size, size, p.x, p.y, p.z, c);
         boxes.push(box);
     }
 
@@ -275,7 +280,7 @@ async function init() {
             p.z += 0.75;
             let c = new THREE.Color();
             c.setHex(0xffffff * Math.random());
-            let box = addBody("dynamic", "cuboid", world, scene, 1, 0, -1, size, size, size, p.x, p.y, p.z, c);
+            let box = addBody("dynamic", "cuboid", world, scene, 1, 0, -1, 100, size, size, size, p.x, p.y, p.z, c);
             boxes.push(box);
         }
     }
@@ -404,7 +409,6 @@ function render() {
 
     r.g1_pad.c.touch = "off";
     r.g2_pad.c.touch = "off";
-
     let startTime = performance.now()
     eventQueue.drainContactForceEvents(event => {
         let d = event.maxForceDirection();
@@ -413,10 +417,8 @@ function render() {
         let c2 = world.getCollider(event.collider2());
         c1.touch = "on";
         c2.touch = "on";
-
         let endTime = performance.now()
-
-        console.log("time", (endTime - startTime), r.g1_pad.c.touch, r.g2_pad.c.touch);
+        // console.log("time", (endTime - startTime), r.g1_pad.c.touch, r.g2_pad.c.touch);
     });
 
     // console.log("touch", r.g1_pad.c.touch, r.g2_pad.c.touch)
@@ -432,9 +434,7 @@ function render() {
             r.g2.m.position.set(gp2.x+gripper_s, gp2.y, gp2.z);
         }
     } else {
-
-        console.log("position", gp1, gp2, r.g1_pad.c.touch, r.g2_pad.c.touch)
-
+        // console.log("position", gp1, gp2, r.g1_pad.c.touch, r.g2_pad.c.touch)
         if (gp1.x < gripper_closed_1 && r.g1_pad.c.touch == "off") {
             r.g1.m.position.set(gp1.x+gripper_s, gp1.y, gp1.z);
         }
@@ -453,7 +453,6 @@ function render() {
     r.g3.r.recomputeMassPropertiesFromColliders();
     r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
-
     r.g1.m.updateWorldMatrix(true, true);
     r.g1_pad.m.updateWorldMatrix(true, true);
 
@@ -469,22 +468,32 @@ function render() {
     r.g1.m.getWorldQuaternion(q);
     r.g1.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     r.g1.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    r.g1.r.recomputeMassPropertiesFromColliders();
 
     r.g1_pad.m.getWorldPosition(p);
     r.g1_pad.m.getWorldQuaternion(q);
     r.g1_pad.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     r.g1_pad.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    r.g1_pad.r.recomputeMassPropertiesFromColliders();
 
     r.g2.m.getWorldPosition(p);
     r.g2.m.getWorldQuaternion(q);
     r.g2.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     r.g2.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    r.g2.r.recomputeMassPropertiesFromColliders();
 
     r.g2_pad.m.getWorldPosition(p);
     r.g2_pad.m.getWorldQuaternion(q);
     r.g2_pad.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     r.g2_pad.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    r.g2_pad.r.recomputeMassPropertiesFromColliders();
 
+    let R = r.base.r.rotation();
+    q.set(R.x, R.y, R.z, R.w);
+    q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
+    r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
+    // console.log("target", q, target_rotation);
 
     // for (let i = 0; i < 10; i++) {
     //     world.step(eventQueue);
@@ -504,7 +513,7 @@ window.addEventListener('keydown', function(event) {
 
     let p = new THREE.Vector3();
     let angle = 0;
-    let q = new THREE.Quaternion();
+    // let q = new THREE.Quaternion();
     let update_position = false;
     let update_rotation = false;
 
@@ -549,32 +558,48 @@ window.addEventListener('keydown', function(event) {
             update_position = true;
             break;
         case "KeyA":
-            angle = 5;
+            angle = 1;
             update_rotation = true;
             break;
         case "KeyD":
-            angle = -5;
+            angle = -1;
             update_rotation = true;
             break;
     }
 
     if (update_position) {
+
+        let T = r.base.r.translation();
+        let p1 = new THREE.Vector3();
+        p1.set(T.x, T.y, T.z);
+        init_position = p1;
+
+        // let p = new THREE.Vector3();
         p.applyQuaternion(r.base.m.quaternion);
         p.add(r.base.m.position);
+        target_position = p;
+
         r.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
         world.step(eventQueue);
         r.base.r.recomputeMassPropertiesFromColliders();
     }
 
     if (update_rotation) {
+
+        // let R = r.base.r.rotation();
+        // let q1 = new THREE.Quaternion();
+        // q1.set(R.x, R.y, R.z, R.w);
+        // init_rotation = q1;
+
         angle = THREE.MathUtils.degToRad(angle);
         let q = new THREE.Quaternion();
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
         q.multiply(r.base.m.quaternion);
-        r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+        target_rotation = q;
+
+        // console.log("set target", target_rotation)
+
+        // r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
 
-    // for (let i = 0; i < 10; i++) {
-    //     world.step(eventQueue);
-    // }
 });
