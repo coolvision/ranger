@@ -238,7 +238,7 @@ async function init() {
     r.base.r.recomputeMassPropertiesFromColliders();
 
     r.base.m.add(pointer_target);
-    pointer_target.position.set(0.5, 0.5, 0.5);
+    // pointer_target.position.set(0.5, 0.5, 0.5);
 
     transform_ctrl = new TransformControls(camera, renderer.domElement);
     transform_ctrl.addEventListener('change', render);
@@ -280,7 +280,7 @@ async function init() {
             p.z += 0.75;
             let c = new THREE.Color();
             c.setHex(0xffffff * Math.random());
-            let box = addBody("dynamic", "cuboid", world, scene, 1, 0, -1, 100, size, size, size, p.x, p.y, p.z, c);
+            let box = addBody("dynamic", "cuboid", world, scene, 1, 0, -1, 0, size, size, size, p.x, p.y, p.z, c);
             boxes.push(box);
         }
     }
