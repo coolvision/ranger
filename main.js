@@ -32,7 +32,7 @@ let r = {};
 let parts = [];
 let joints = [];
 let gripper_v = 10;
-let gripper_s = 0.005;
+let gripper_s = 0.001;
 let gripper_f = 100;
 let gripper_d = 10;
 let gripper_open_1 = -0.05;
@@ -185,15 +185,21 @@ async function init() {
 
     r.g1 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, 0.01, 0.05, 0.1);
     r.g2 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, 0.01, 0.05, 0.1);
-    r.g1.m.position.set(-0.05, 0, r.g1.d/2);
-    r.g2.m.position.set(0.05, 0, r.g2.d/2);
+    r.g1.m.position.set(gripper_open_1, 0, r.g1.d/2);
+    r.g2.m.position.set(gripper_open_2, 0, r.g2.d/2);
 
-    r.g1.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
-    r.g2.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
+    r.g1_pad = addBody("position", "cuboid", world, r.g1.m, 0, 0, gripper_f, 0.001, 0.05*0.9, 0.1*0.9);
+    r.g2_pad = addBody("position", "cuboid", world, r.g2.m, 0, 0, gripper_f, 0.001, 0.05*0.9, 0.1*0.9);
+    r.g1_pad.m.position.set(0.01/2+0.001/2, 0, 0);
+    r.g2_pad.m.position.set(-0.01/2-0.001/2, 0, 0);
+
+    r.g1_pad.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
+    r.g2_pad.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
+    r.g1_pad.c.touch = "off";
+    r.g2_pad.c.touch = "off";
 
     parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
         r.elbow, r.forearm, r.wrist, r.g3);
-
 
     let x = {x: 1.0, y: 0.0, z: 0.0};
     let y = {x: 0.0, y: 1.0, z: 0.0};
@@ -384,47 +390,58 @@ function render() {
         parts[i].m.updateWorldMatrix(true, true);
     }
 
-    r.g1.c.v1 = r.g1.m.localToWorld(new THREE.Vector3(0, 0, 0));
-    r.g1.c.v2 = r.g1.m.localToWorld(new THREE.Vector3(-1, 0, 0));
-    r.g1.c.v = r.g1.c.v2.sub(r.g1.c.v1);
-
-    r.g2.c.v1 = r.g2.m.localToWorld(new THREE.Vector3(0, 0, 0));
-    r.g2.c.v2 = r.g2.m.localToWorld(new THREE.Vector3(-1, 0, 0));
-    r.g2.c.v = r.g2.c.v2.sub(r.g2.c.v1);
+    // r.g1.c.v1 = r.g1.m.localToWorld(new THREE.Vector3(0, 0, 0));
+    // r.g1.c.v2 = r.g1.m.localToWorld(new THREE.Vector3(-1, 0, 0));
+    // r.g1.c.v = r.g1.c.v2.sub(r.g1.c.v1);
+    //
+    // r.g2.c.v1 = r.g2.m.localToWorld(new THREE.Vector3(0, 0, 0));
+    // r.g2.c.v2 = r.g2.m.localToWorld(new THREE.Vector3(1, 0, 0));
+    // r.g2.c.v = r.g2.c.v2.sub(r.g2.c.v1);
 
     // eventQueue.drainCollisionEvents((handle1, handle2, started) => {
     //     console.log("collision", handle1, handle2, started);
     // });
+
+    r.g1_pad.c.touch = "off";
+    r.g2_pad.c.touch = "off";
+
+    let startTime = performance.now()
     eventQueue.drainContactForceEvents(event => {
         let d = event.maxForceDirection();
         let dv = new THREE.Vector3(d.x, d.y, d.z);
         let c1 = world.getCollider(event.collider1());
         let c2 = world.getCollider(event.collider2());
-        if (c1.v) {
-            console.log("c1.v", THREE.MathUtils.radToDeg(c1.v.angleTo(dv)));
-        } else if (c2.v) {
-            console.log("c2.v", THREE.MathUtils.radToDeg(c2.v.angleTo(dv)));
-        }
-        // console.log("ContactForce", c1.v, c2.v, d);
+        c1.touch = "on";
+        c2.touch = "on";
+
+        let endTime = performance.now()
+
+        console.log("time", (endTime - startTime), r.g1_pad.c.touch, r.g2_pad.c.touch);
     });
 
-    // let gp1 = r.g1.m.position.clone();
-    // let gp2 = r.g2.m.position.clone();
-    // if (gripper_open) {
-    //     if (gp1.x > gripper_open_1) {
-    //         r.g1.m.position.set(gp1.x-gripper_s, gp1.y, gp1.z);
-    //     }
-    //     if (gp2.x < gripper_open_2) {
-    //         r.g2.m.position.set(gp2.x+gripper_s, gp2.y, gp2.z);
-    //     }
-    // } else {
-    //     if (gp1.x < gripper_closed_1) {
-    //         r.g1.m.position.set(gp1.x+gripper_s, gp1.y, gp1.z);
-    //     }
-    //     if (gp2.x > gripper_closed_2) {
-    //         r.g2.m.position.set(gp2.x-gripper_s, gp2.y, gp2.z);
-    //     }
-    // }
+    // console.log("touch", r.g1_pad.c.touch, r.g2_pad.c.touch)
+
+    let gp1 = r.g1.m.position.clone();
+    let gp2 = r.g2.m.position.clone();
+
+    if (gripper_open) {
+        if (gp1.x > gripper_open_1) {
+            r.g1.m.position.set(gp1.x-gripper_s, gp1.y, gp1.z);
+        }
+        if (gp2.x < gripper_open_2) {
+            r.g2.m.position.set(gp2.x+gripper_s, gp2.y, gp2.z);
+        }
+    } else {
+
+        console.log("position", gp1, gp2, r.g1_pad.c.touch, r.g2_pad.c.touch)
+
+        if (gp1.x < gripper_closed_1 && r.g1_pad.c.touch == "off") {
+            r.g1.m.position.set(gp1.x+gripper_s, gp1.y, gp1.z);
+        }
+        if (gp2.x > gripper_closed_2 && r.g2_pad.c.touch == "off") {
+            r.g2.m.position.set(gp2.x-gripper_s, gp2.y, gp2.z);
+        }
+    }
 
     let p = new THREE.Vector3();
     let q = new THREE.Quaternion();
@@ -438,7 +455,10 @@ function render() {
 
 
     r.g1.m.updateWorldMatrix(true, true);
+    r.g1_pad.m.updateWorldMatrix(true, true);
+
     r.g2.m.updateWorldMatrix(true, true);
+    r.g2_pad.m.updateWorldMatrix(true, true);
 
     // let g0 = new THREE.Vector3(0, 0, 0);
     // let gy1 = new THREE.Vector3(0, -1, 0);
@@ -450,10 +470,21 @@ function render() {
     r.g1.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     r.g1.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
+    r.g1_pad.m.getWorldPosition(p);
+    r.g1_pad.m.getWorldQuaternion(q);
+    r.g1_pad.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    r.g1_pad.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
     r.g2.m.getWorldPosition(p);
     r.g2.m.getWorldQuaternion(q);
     r.g2.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     r.g2.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
+    r.g2_pad.m.getWorldPosition(p);
+    r.g2_pad.m.getWorldQuaternion(q);
+    r.g2_pad.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    r.g2_pad.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
 
     // for (let i = 0; i < 10; i++) {
     //     world.step(eventQueue);
@@ -490,10 +521,10 @@ window.addEventListener('keydown', function(event) {
             }
             break;
         case "KeyP":
-            if (gp1.x < gripper_closed_1) {
+            if (gp1.x < gripper_closed_1 && r.g1_pad.c.touch == "off") {
                 r.g1.m.position.set(gp1.x+gripper_s, gp1.y, gp1.z);
             }
-            if (gp2.x > gripper_closed_2) {
+            if (gp2.x > gripper_closed_2 && r.g2_pad.c.touch == "off") {
                 r.g2.m.position.set(gp2.x-gripper_s, gp2.y, gp2.z);
             }
             break;
