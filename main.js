@@ -1,11 +1,8 @@
 
 import * as THREE from 'three';
-
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-
 import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
 
 let container;
@@ -30,7 +27,6 @@ let boxes = [];
 
 let r = {};
 let parts = [];
-let joints = [];
 let gripper_v = 10;
 let gripper_s = 0.001;
 let gripper_f = 100;
@@ -44,11 +40,9 @@ let gripper_open = true;
 
 let platform, gripper;
 
-let init_position = new THREE.Vector3();
-let target_position = new THREE.Vector3();
-let init_rotation = new THREE.Quaternion();
-let target_rotation = new THREE.Quaternion();
 let target_direction = new THREE.Vector3();
+let target_rotation = new THREE.Quaternion();
+
 await init();
 
 function getColliderDesc(world, scene, f, width, height, depth, color=0x333333) {
@@ -142,7 +136,6 @@ async function init() {
 
     camera.position.set(0, 1, 1.2);
 
-
     scene.add(camera);
 
 //==============================================================================
@@ -151,9 +144,10 @@ async function init() {
     world = new RAPIER.World(gravity);
     eventQueue = new RAPIER.EventQueue(true);
 
-    // let ip = new RAPIER.IntegrationParameters();
-    // ip.erp = 1.0;
-
+    let ip = world.integrationParameters;
+    ip.erp = 1.0;
+    ip.maxStabilizationIterations = 10;
+    
     let offset = 0.01;
     platform = world.createCharacterController(offset);
     gripper = world.createCharacterController(offset);
@@ -161,7 +155,6 @@ async function init() {
     // Create the ground
     let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 1, 10.0);
     groundColliderDesc.setTranslation(0, -1, 0);
-    // groundColliderDesc.setFriction(0);
     world.createCollider(groundColliderDesc);
 
     let arm_w = 0.05;
@@ -188,8 +181,6 @@ async function init() {
 
     r.g1_pad.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
     r.g2_pad.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
-    r.g1_pad.c.touch = "off";
-    r.g2_pad.c.touch = "off";
 
     parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
         r.elbow, r.forearm, r.wrist, r.g3);
@@ -214,7 +205,6 @@ async function init() {
     r.base.r.recomputeMassPropertiesFromColliders();
 
     r.base.m.add(pointer_target);
-    // pointer_target.position.set(0.5, 0.5, 0.5);
 
     transform_ctrl = new TransformControls(camera, renderer.domElement);
     transform_ctrl.addEventListener('change', render);
@@ -229,8 +219,6 @@ async function init() {
 
     let size = 0.5
     for (let i = 0; i < 1; i++) {
-        // let p = new THREE.Vector3(Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5 + 1);
-        // p.multiplyScalar(1);
         let p = new THREE.Vector3(0, 1, 0.75);
         let c = new THREE.Color();
         c.setHex(0xffffff * Math.random());
@@ -241,18 +229,12 @@ async function init() {
     for (let i = 0; i < 100; i++) {
         world.step(eventQueue);
     }
-
     pointer_target.position.set(0.15, 0.455, 0.5);
-    // r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    // world.step(eventQueue);
-
 
     size = 0.05;
     for (let i = 1; i < 5; i++) {
         for (let j = 1; j < 5; j++) {
             let p = new THREE.Vector3(-0.25 + i/10, 1, -0.25 + j/10);
-            // p.multiplyScalar(0.2);
-            // p.y = 1;
             p.z += 0.75;
             let c = new THREE.Color();
             c.setHex(0xffffff * Math.random());
@@ -260,19 +242,6 @@ async function init() {
             boxes.push(box);
         }
     }
-
-    // size = 0.05;
-    // for (let i = 0; i < 50; i++) {
-    //     let p = new THREE.Vector3(Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5);
-    //     p.multiplyScalar(0.2);
-    //     p.y = 1;
-    //     p.z += 1;
-    //     let c = new THREE.Color();
-    //     c.setHex(0xffffff * Math.random());
-    //     let box = addBody("dynamic", "cuboid", world, scene, 1, 0, 100, size, size, size, p.x, p.y, p.z, c);
-    //     boxes.push(box);
-    // }
-
 
 //==============================================================================
 
@@ -310,32 +279,7 @@ async function init() {
     renderer.setAnimationLoop(render);
 }
 
-function toggleGripper() {
-    if (gripper_open) {
-        // close
-        // joints[7].configureMotorVelocity(gripper_v, gripper_s);
-        // joints[8].configureMotorVelocity(-gripper_v, gripper_s);
-    } else {
-        // open
-        // joints[7].configureMotorVelocity(-gripper_v, gripper_s);
-        // joints[8].configureMotorVelocity(gripper_v, gripper_s);
-    }
-    gripper_open = !gripper_open;
-}
-
-let iter = 0;
-
 function render() {
-
-    // console.log("pointer_target", p)
-
-    // let t = {x: p.x, y: p.y, z: p.z};
-    // gripper.computeColliderMovement(r.g3.c, t);
-    // let p1 = gripper.computedMovement();
-
-    // console.log("computedMovement", t, p1)
-    // r.g3.r.setNextKinematicTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
-
 
     for (let i = 0; i < boxes.length; i++) {
         let p = boxes[i].r.translation();
@@ -371,21 +315,8 @@ function render() {
         parts[i].m.updateWorldMatrix(true, true);
     }
 
-    // r.g1.c.v1 = r.g1.m.localToWorld(new THREE.Vector3(0, 0, 0));
-    // r.g1.c.v2 = r.g1.m.localToWorld(new THREE.Vector3(-1, 0, 0));
-    // r.g1.c.v = r.g1.c.v2.sub(r.g1.c.v1);
-    //
-    // r.g2.c.v1 = r.g2.m.localToWorld(new THREE.Vector3(0, 0, 0));
-    // r.g2.c.v2 = r.g2.m.localToWorld(new THREE.Vector3(1, 0, 0));
-    // r.g2.c.v = r.g2.c.v2.sub(r.g2.c.v1);
-
-    // eventQueue.drainCollisionEvents((handle1, handle2, started) => {
-    //     console.log("collision", handle1, handle2, started);
-    // });
-
     r.g1_pad.c.touch = "off";
     r.g2_pad.c.touch = "off";
-    let startTime = performance.now()
     eventQueue.drainContactForceEvents(event => {
         let d = event.maxForceDirection();
         let dv = new THREE.Vector3(d.x, d.y, d.z);
@@ -393,15 +324,10 @@ function render() {
         let c2 = world.getCollider(event.collider2());
         c1.touch = "on";
         c2.touch = "on";
-        let endTime = performance.now()
-        // console.log("time", (endTime - startTime), r.g1_pad.c.touch, r.g2_pad.c.touch);
     });
-
-    // console.log("touch", r.g1_pad.c.touch, r.g2_pad.c.touch)
 
     let gp1 = r.g1.m.position.clone();
     let gp2 = r.g2.m.position.clone();
-
     if (gripper_open) {
         if (gp1.x > gripper_open_1) {
             r.g1.m.position.set(gp1.x-gripper_s, gp1.y, gp1.z);
@@ -410,7 +336,6 @@ function render() {
             r.g2.m.position.set(gp2.x+gripper_s, gp2.y, gp2.z);
         }
     } else {
-        // console.log("position", gp1, gp2, r.g1_pad.c.touch, r.g2_pad.c.touch)
         if (gp1.x < gripper_closed_1 && r.g1_pad.c.touch == "off") {
             r.g1.m.position.set(gp1.x+gripper_s, gp1.y, gp1.z);
         }
@@ -419,25 +344,25 @@ function render() {
         }
     }
 
-    let p = new THREE.Vector3();
-    let q = new THREE.Quaternion();
-    pointer_target.getWorldPosition(p);
-    pointer_target.getWorldQuaternion(q);
-
-
 //==============================================================================
+    let p = new THREE.Vector3();
+    pointer_target.getWorldPosition(p);
     r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
 
+    let d = target_direction.clone();
+    d.applyQuaternion(r.base.m.quaternion);
+
     let T = r.base.r.translation();
-    r.base.r.setNextKinematicTranslation({x: T.x+target_direction.x,
-         y: T.y+target_direction.y,
-         z: T.z+target_direction.z}, true);
+    r.base.r.setNextKinematicTranslation({x: T.x+d.x, y: T.y+d.y, z: T.z+d.z}, true);
 //==============================================================================
 
     world.step(eventQueue);
 
 //==============================================================================
+
     r.g3.r.recomputeMassPropertiesFromColliders();
+    let q = new THREE.Quaternion();
+    pointer_target.getWorldQuaternion(q);
     r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 
     r.base.r.recomputeMassPropertiesFromColliders();
@@ -447,46 +372,23 @@ function render() {
     r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 //==============================================================================
 
-    r.g1.m.updateWorldMatrix(true, true);
-    r.g1_pad.m.updateWorldMatrix(true, true);
-
-    r.g2.m.updateWorldMatrix(true, true);
-    r.g2_pad.m.updateWorldMatrix(true, true);
-
-    r.g1.m.getWorldPosition(p);
-    r.g1.m.getWorldQuaternion(q);
-    r.g1.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    r.g1.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-    r.g1.r.recomputeMassPropertiesFromColliders();
-
-    r.g1_pad.m.getWorldPosition(p);
-    r.g1_pad.m.getWorldQuaternion(q);
-    r.g1_pad.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    r.g1_pad.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-    r.g1_pad.r.recomputeMassPropertiesFromColliders();
-
-    r.g2.m.getWorldPosition(p);
-    r.g2.m.getWorldQuaternion(q);
-    r.g2.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    r.g2.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-    r.g2.r.recomputeMassPropertiesFromColliders();
-
-    r.g2_pad.m.getWorldPosition(p);
-    r.g2_pad.m.getWorldQuaternion(q);
-    r.g2_pad.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    r.g2_pad.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-    r.g2_pad.r.recomputeMassPropertiesFromColliders();
-
-
-    // r.base.r.recomputeMassPropertiesFromColliders();
-
-    // console.log("target", q, target_rotation);
-
-    // for (let i = 0; i < 10; i++) {
-    //     world.step(eventQueue);
-    // }
+    updateKinematic(r.g1);
+    updateKinematic(r.g1_pad);
+    updateKinematic(r.g2);
+    updateKinematic(r.g2_pad);
 
     renderer.render(scene, camera);
+}
+
+function updateKinematic(part) {
+    let p = new THREE.Vector3();
+    let q = new THREE.Quaternion();
+    part.m.updateWorldMatrix(true, true);
+    part.m.getWorldPosition(p);
+    part.m.getWorldQuaternion(q);
+    part.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    part.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    part.r.recomputeMassPropertiesFromColliders();
 }
 
 function onWindowResize() {
@@ -498,41 +400,23 @@ function onWindowResize() {
 
 window.addEventListener('keyup', function(event) {
 
-    target_direction.set(0, 0, 0);
-
-    let R = r.base.r.rotation();
-    target_rotation.set(R.x, R.y, R.z, R.w);
-
+    if (event.code == "KeyW" || event.code == "KeyS") {
+        target_direction.set(0, 0, 0);
+    }
+    if (event.code == "KeyA" || event.code == "KeyD") {
+        let R = r.base.r.rotation();
+        target_rotation.set(R.x, R.y, R.z, R.w);
+    }
 });
 
 window.addEventListener('keydown', function(event) {
 
     let p = new THREE.Vector3();
     let angle = 0;
-    // let q = new THREE.Quaternion();
     let update_position = false;
     let update_rotation = false;
 
-    let gp1 = r.g1.m.position.clone();
-    let gp2 = r.g2.m.position.clone();
-
     switch ( event.code ) {
-        case "KeyO":
-            if (gp1.x > gripper_open_1) {
-                r.g1.m.position.set(gp1.x-gripper_s, gp1.y, gp1.z);
-            }
-            if (gp2.x < gripper_open_2) {
-                r.g2.m.position.set(gp2.x+gripper_s, gp2.y, gp2.z);
-            }
-            break;
-        case "KeyP":
-            if (gp1.x < gripper_closed_1 && r.g1_pad.c.touch == "off") {
-                r.g1.m.position.set(gp1.x+gripper_s, gp1.y, gp1.z);
-            }
-            if (gp2.x > gripper_closed_2 && r.g2_pad.c.touch == "off") {
-                r.g2.m.position.set(gp2.x-gripper_s, gp2.y, gp2.z);
-            }
-            break;
         case "KeyT":
             transform_ctrl.setMode('translate');
             break;
@@ -543,7 +427,7 @@ window.addEventListener('keydown', function(event) {
             world.step(eventQueue);
             break;
         case "KeyG":
-            toggleGripper();
+            gripper_open = !gripper_open;
             break;
         case "KeyW":
             p.set(0, 0, 0.01);
@@ -554,48 +438,25 @@ window.addEventListener('keydown', function(event) {
             update_position = true;
             break;
         case "KeyA":
-            angle = 30;
+            angle = 90;
             update_rotation = true;
             break;
         case "KeyD":
-            angle = -30;
+            angle = -90;
             update_rotation = true;
             break;
     }
 
     if (update_position) {
-
-        // let T = r.base.r.translation();
-        // let p1 = new THREE.Vector3();
-        // p1.set(T.x, T.y, T.z);
-        // init_position = p1;
-
-        // let p = new THREE.Vector3();
-        p.applyQuaternion(r.base.m.quaternion);
-        // p.add(r.base.m.position);
         target_direction = p;
-
-        // r.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-        // world.step(eventQueue);
-        // r.base.r.recomputeMassPropertiesFromColliders();
     }
 
     if (update_rotation) {
-
-        // let R = r.base.r.rotation();
-        // let q1 = new THREE.Quaternion();
-        // q1.set(R.x, R.y, R.z, R.w);
-        // init_rotation = q1;
-
         angle = THREE.MathUtils.degToRad(angle);
         let q = new THREE.Quaternion();
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
         q.multiply(r.base.m.quaternion);
         target_rotation = q;
-
-        // console.log("set target", target_rotation)
-
-        // r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
 
 });
