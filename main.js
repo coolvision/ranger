@@ -48,7 +48,7 @@ let init_position = new THREE.Vector3();
 let target_position = new THREE.Vector3();
 let init_rotation = new THREE.Quaternion();
 let target_rotation = new THREE.Quaternion();
-
+let target_direction = new THREE.Vector3();
 await init();
 
 function getColliderDesc(world, scene, f, width, height, depth, color=0x333333) {
@@ -176,18 +176,6 @@ async function init() {
     r.g3 = addBody("position", "cuboid", world, scene, 0, 0, -1, r_d, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
     r.g3.m.position.set(0.5, 0.5, 0.5);
 
-    // r.g1 = addBody("-", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
-    // r.g2 = addBody("-", "cuboid", world, r.g3.m, 0, 0.001, gripper_f, 0.02, 0.02, 0.1);
-    // parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
-    //     r.elbow, r.forearm, r.wrist, r.g1, r.g2, r.g3);
-
-    // r.g1 = getColliderDesc(world, r.g3.m, gripper_f, 0.01, 0.05, 0.1);
-    // r.g2 = getColliderDesc(world, r.g3.m, gripper_f, 0.01, 0.05, 0.1);
-    // r.g1.c = world.createCollider(r.g1.cd);
-    // r.g2.c = world.createCollider(r.g2.cd);
-    // r.g1.m.position.set(-0.05, 0, r.g1.d/2);
-    // r.g2.m.position.set(0.05, 0, r.g2.d/2);
-
     r.g1 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
     r.g2 = addBody("position", "cuboid", world, r.g3.m, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
     r.g1.m.position.set(gripper_open_1, 0, r.g1.d/2);
@@ -218,20 +206,8 @@ async function init() {
     let j4 = revoluteJoint(r.elbow.r, r.forearm.r, z, 0, 0, r.elbow.d/2, 0, 0, -r.forearm.d/2);
     let j5 = revoluteJoint(r.forearm.r, r.wrist.r, x, arm_w/2, 0, r.forearm.d/2-arm_w/2, -arm_w/2, 0, -r.wrist.d/2);
     let j6 = revoluteJoint(r.wrist.r, r.g3.r, z, 0, 0, r.wrist.d/2, 0, 0, -r.g3.d/2);
-    // let j7 = prismaticJoint(r.g3.r, r.g1.r, x, -0.05, -0.02, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
-    // let j8 = prismaticJoint(r.g3.r, r.g2.r, x, 0.02, 0.05, 0, 0, r.g3.d/2, 0, 0, -r.g1.d/2-0.02);
-
-    joints.push(j0, j1, j2, j3, j4, j5, j6);
     j1.setContactsEnabled(false);
     ji.setContactsEnabled(false);
-
-    // joints[7].configureMotorModel(1);
-    // joints[8].configureMotorModel(1);
-    // joints[7].configureMotorVelocity(-gripper_v, gripper_s);
-    // joints[8].configureMotorVelocity(gripper_v, gripper_s);
-
-    // joints[7].configureMotorPosition(gripper_open_1, gripper_s, gripper_d);
-    // joints[8].configureMotorPosition(gripper_open_2, gripper_s, gripper_d)
 
     r.base.r.setNextKinematicTranslation({x: 0, y: r.base.h/2, z: 0}, true);
     world.step(eventQueue);
@@ -448,10 +424,28 @@ function render() {
     pointer_target.getWorldPosition(p);
     pointer_target.getWorldQuaternion(q);
 
+
+//==============================================================================
     r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+
+    let T = r.base.r.translation();
+    r.base.r.setNextKinematicTranslation({x: T.x+target_direction.x,
+         y: T.y+target_direction.y,
+         z: T.z+target_direction.z}, true);
+//==============================================================================
+
     world.step(eventQueue);
+
+//==============================================================================
     r.g3.r.recomputeMassPropertiesFromColliders();
     r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
+    r.base.r.recomputeMassPropertiesFromColliders();
+    let R = r.base.r.rotation();
+    q.set(R.x, R.y, R.z, R.w);
+    q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
+    r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+//==============================================================================
 
     r.g1.m.updateWorldMatrix(true, true);
     r.g1_pad.m.updateWorldMatrix(true, true);
@@ -459,11 +453,6 @@ function render() {
     r.g2.m.updateWorldMatrix(true, true);
     r.g2_pad.m.updateWorldMatrix(true, true);
 
-    // let g0 = new THREE.Vector3(0, 0, 0);
-    // let gy1 = new THREE.Vector3(0, -1, 0);
-    // let gy2 = new THREE.Vector3(0, 1, 0);
-
-    // console.log("r.g1.c.v", r.g1.c.v, r.g2.c.v )
     r.g1.m.getWorldPosition(p);
     r.g1.m.getWorldQuaternion(q);
     r.g1.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
@@ -488,10 +477,8 @@ function render() {
     r.g2_pad.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     r.g2_pad.r.recomputeMassPropertiesFromColliders();
 
-    let R = r.base.r.rotation();
-    q.set(R.x, R.y, R.z, R.w);
-    q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
-    r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
+    // r.base.r.recomputeMassPropertiesFromColliders();
 
     // console.log("target", q, target_rotation);
 
@@ -508,6 +495,15 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     render();
 }
+
+window.addEventListener('keyup', function(event) {
+
+    target_direction.set(0, 0, 0);
+
+    let R = r.base.r.rotation();
+    target_rotation.set(R.x, R.y, R.z, R.w);
+
+});
 
 window.addEventListener('keydown', function(event) {
 
@@ -550,38 +546,38 @@ window.addEventListener('keydown', function(event) {
             toggleGripper();
             break;
         case "KeyW":
-            p.set(0, 0, 0.05);
+            p.set(0, 0, 0.01);
             update_position = true;
             break;
         case "KeyS":
-            p.set(0, 0, -0.05);
+            p.set(0, 0, -0.01);
             update_position = true;
             break;
         case "KeyA":
-            angle = 1;
+            angle = 30;
             update_rotation = true;
             break;
         case "KeyD":
-            angle = -1;
+            angle = -30;
             update_rotation = true;
             break;
     }
 
     if (update_position) {
 
-        let T = r.base.r.translation();
-        let p1 = new THREE.Vector3();
-        p1.set(T.x, T.y, T.z);
-        init_position = p1;
+        // let T = r.base.r.translation();
+        // let p1 = new THREE.Vector3();
+        // p1.set(T.x, T.y, T.z);
+        // init_position = p1;
 
         // let p = new THREE.Vector3();
         p.applyQuaternion(r.base.m.quaternion);
-        p.add(r.base.m.position);
-        target_position = p;
+        // p.add(r.base.m.position);
+        target_direction = p;
 
-        r.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-        world.step(eventQueue);
-        r.base.r.recomputeMassPropertiesFromColliders();
+        // r.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+        // world.step(eventQueue);
+        // r.base.r.recomputeMassPropertiesFromColliders();
     }
 
     if (update_rotation) {
