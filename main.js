@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
+// import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
+import RAPIER from './rapier3d-compat';
 
 let container;
 let camera, scene, renderer;
@@ -147,15 +148,15 @@ async function init() {
     let ip = world.integrationParameters;
     ip.erp = 1.0;
     ip.maxStabilizationIterations = 10;
-    
-    let offset = 0.01;
+
+    let offset = 0;
     platform = world.createCharacterController(offset);
     gripper = world.createCharacterController(offset);
 
     // Create the ground
     let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 1, 10.0);
     groundColliderDesc.setTranslation(0, -1, 0);
-    world.createCollider(groundColliderDesc);
+    // world.createCollider(groundColliderDesc);
 
     let arm_w = 0.05;
     r.base = addBody("position", "cuboid", world, scene, 0, 0, -1, r_d, 0.4, 0.15, 0.4);
@@ -189,8 +190,8 @@ async function init() {
     let y = {x: 0.0, y: 1.0, z: 0.0};
     let z = {x: 0.0, y: 0.0, z: 1.0};
 
-    let j0 = fixedJoint(r.base.r, r.mast.r, 0, r.base.h/2, 0, 0, -r.mast.h/2, 0);
-    let ji = fixedJoint(r.base.r, r.indicator.r, 0, r.base.h/2, r.base.w/2);
+    // let j0 = fixedJoint(r.base.r, r.mast.r, 0, r.base.h/2, 0, 0, -r.mast.h/2, 0);
+    // let ji = fixedJoint(r.base.r, r.indicator.r, 0, r.base.h/2, r.base.w/2);
     let j1 = revoluteJoint(r.mast.r, r.arm_base.r, y, 0, 0, 0, -arm_w*0.75, 0, 0);
     let j2 = revoluteJoint(r.arm_base.r, r.shoulder.r, x, r.arm_base.w/2, 0, 0, -arm_w/2, 0, -r.shoulder.d/2);
     let j3 = revoluteJoint(r.shoulder.r, r.elbow.r, x,  -arm_w/2, 0, r.shoulder.d/2-arm_w/2,  arm_w/2, 0, -r.elbow.d/2);
@@ -198,7 +199,7 @@ async function init() {
     let j5 = revoluteJoint(r.forearm.r, r.wrist.r, x, arm_w/2, 0, r.forearm.d/2-arm_w/2, -arm_w/2, 0, -r.wrist.d/2);
     let j6 = revoluteJoint(r.wrist.r, r.g3.r, z, 0, 0, r.wrist.d/2, 0, 0, -r.g3.d/2);
     j1.setContactsEnabled(false);
-    ji.setContactsEnabled(false);
+    // ji.setContactsEnabled(false);
 
     r.base.r.setNextKinematicTranslation({x: 0, y: r.base.h/2, z: 0}, true);
     world.step(eventQueue);
@@ -349,11 +350,23 @@ function render() {
     pointer_target.getWorldPosition(p);
     r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
 
+
+
+    // r.g3.r.setNextKinematicTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
+
+
     let d = target_direction.clone();
     d.applyQuaternion(r.base.m.quaternion);
 
     let T = r.base.r.translation();
-    r.base.r.setNextKinematicTranslation({x: T.x+d.x, y: T.y+d.y, z: T.z+d.z}, true);
+
+    let t = {x: T.x+d.x, y: T.y+d.y, z: T.z+d.z};
+    platform.computeColliderMovement(r.base.c, t);
+    let pt = platform.computedMovement();
+    console.log("platform", t, pt);
+
+    r.base.r.setNextKinematicTranslation({x: pt.x, y: pt.y, z: pt.z}, true);
+    // r.base.r.setNextKinematicTranslation({x: T.x+d.x, y: T.y+d.y, z: T.z+d.z}, true);
 //==============================================================================
 
     world.step(eventQueue);
