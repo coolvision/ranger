@@ -28,8 +28,8 @@ let eventQueue;
 let boxes = [];
 
 let r = {};
-let dyn_parts = [];
-let robot_parts = [];
+let parts = [];
+let joints = [];
 let gripper_v = 10;
 let gripper_s = 0.001;
 let gripper_f = 100;
@@ -47,6 +47,10 @@ let lgt = new THREE.Vector3();
 let curr_gt = new THREE.Vector3();
 let target_direction = new THREE.Vector3();
 let target_rotation = new THREE.Quaternion();
+
+
+let print_frames_i = 0;
+let frame_i = 0;
 
 await init();
 
@@ -89,7 +93,7 @@ function addBody(type, shape, world, scene, g, m, f, d, width, height, depth, x=
 
     rigid_body.setAdditionalMass(m);
     rigid_body.setGravityScale(g);
-    rigid_body.setAngularDamping(d);
+    // rigid_body.setAngularDamping(d);
 
     let cd = getColliderDesc(world, scene, f, width, height, depth, color);
     let collider = world.createCollider(cd.cd, rigid_body);
@@ -186,19 +190,20 @@ async function init() {
     r.g1_pad.m.position.set(0.01/2+0.001/2, 0, 0);
     r.g2_pad.m.position.set(-0.01/2-0.001/2, 0, 0);
 
-    dyn_parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
-        r.elbow, r.forearm, r.wrist, r.g3);
-    robot_parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
-        r.elbow, r.forearm, r.wrist, r.g3, r.g1, r.g2);
-
-    for (let i in robot_parts) {
-        robot_parts[i].c.is_robot = true;
-        robot_parts[i].c.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+    // parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
+    //     r.elbow, r.forearm, r.wrist, r.g3);
+    parts.push(r.base, r.mast, r.indicator, r.arm_base, r.shoulder,
+        r.elbow, r.forearm, r.wrist, r.g3, r.g1, r.g2, r.g1_pad, r.g2_pad);
+    for (let i in parts) {
+        parts[i].c.is_robot = true;
+        parts[i].c.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     }
     r.g1_pad.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
     r.g2_pad.c.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
-    r.g1_pad.c.is_robot = true;
-    r.g2_pad.c.is_robot = true;
+    r.g1.c.attached = true;
+    r.g1_pad.c.attached = true;
+    r.g2.c.attached = true;
+    r.g2_pad.c.attached = true;
 
     let x = {x: 1.0, y: 0.0, z: 0.0};
     let y = {x: 0.0, y: 1.0, z: 0.0};
@@ -212,6 +217,12 @@ async function init() {
     let j4 = revoluteJoint(r.elbow.r, r.forearm.r, z, 0, 0, r.elbow.d/2, 0, 0, -r.forearm.d/2);
     let j5 = revoluteJoint(r.forearm.r, r.wrist.r, x, arm_w/2, 0, r.forearm.d/2-arm_w/2, -arm_w/2, 0, -r.wrist.d/2);
     let j6 = revoluteJoint(r.wrist.r, r.g3.r, z, 0, 0, r.wrist.d/2, 0, 0, -r.g3.d/2);
+
+    joints.push(j0, j1, j2, j3, j4, j5, j6);
+    for (let j in joints) {
+        joints[j].setContactsEnabled(false);
+    }
+
     j1.setContactsEnabled(false);
     ji.setContactsEnabled(false);
 
@@ -259,6 +270,10 @@ async function init() {
         }
     }
 
+    // for (let i = 0; i < 5000; i++) {
+    //     world.step(eventQueue);
+    // }
+
 //==============================================================================
 
     scene.add( new THREE.AmbientLight(0xf0f0f0));
@@ -293,9 +308,23 @@ async function init() {
     controls.addEventListener('change', render);
 
     renderer.setAnimationLoop(render);
+
+    // for (let i in parts) {
+    //     let q = parts[i].r.rotation();
+    //     let q1 = new THREE.Quaternion();
+    //     q1.set(q.x, q.y, q.z, q.w);
+    //     let p = parts[i].r.translation();
+    //     let p1 = new THREE.Vector3();
+    //     p1.set(p.x, p.y, p.z);
+    //     parts[i].lgt = p1;
+    //     parts[i].lgr = q1;
+    // }
 }
 
+
 function render() {
+
+    frame_i++;
 
     for (let i = 0; i < boxes.length; i++) {
         let p = boxes[i].r.translation();
@@ -304,119 +333,206 @@ function render() {
         boxes[i].m.quaternion.set(q.x, q.y, q.z, q.w);
     }
 
-    for (let i in dyn_parts) {
+//==============================================================================
+    stop_arm_motion = false;
+    for (let i in parts) {
+        world.contactsWith(parts[i].c, (c2) => {
+            if (!c2.is_robot && !c2.ignore_controller) {
+                // console.log("stop_arm_motion", i, c2);
+                stop_arm_motion = true;
+            }
+        });
+    }
 
-        dyn_parts[i].r.wakeUp();
+    if (!stop_arm_motion) {
 
-        let q = dyn_parts[i].r.rotation();
+        for (let i in parts) {
+            let q = parts[i].r.rotation();
+            let q1 = new THREE.Quaternion();
+            q1.set(q.x, q.y, q.z, q.w);
+            let p = parts[i].r.translation();
+            let p1 = new THREE.Vector3();
+            p1.set(p.x, p.y, p.z);
+            parts[i].lgt = p1;
+            parts[i].lgr = q1;
+
+            if (i >= 5 && i <= 8) console.log("save", i, parts[i].r.translation().x,
+                                    parts[i].r.translation().y,
+                                    parts[i].r.translation().z);
+            if (i >= 5 && i <= 8) console.log("save q", i, parts[i].r.rotation().x,
+                                    parts[i].r.rotation().y,
+                                    parts[i].r.rotation().z,
+                                    parts[i].r.rotation().w);
+
+            if (parts[i].t == "dynamic") parts[i].r.setBodyType(0);
+        }
+
+        let p = new THREE.Vector3();
+        pointer_target.getWorldPosition(p);
+        r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+
+        // console.log("not stop_arm_motion", frame_i, r.g3.r.translation().x,
+        //                         r.g3.r.translation().y,
+        //                         r.g3.r.translation().z);
+
+
+
+    } else {
+
+        console.log("stop_arm_motion", r.g3.r.translation())
+        console.log("******************************************************************************");
+        console.log("******************************************************************************");
+        console.log("******************************************************************************");
+
+        print_frames_i = 5;
+
+        for (let i in parts) {
+            if (i >= 5 && i <= 8) console.log("before", i, parts[i].r.translation().x,
+                                    parts[i].r.translation().y,
+                                    parts[i].r.translation().z, parts[i].r.linvel(), parts[i].r.angvel());
+            if (i >= 5 && i <= 8) console.log("before q", i, parts[i].r.rotation().x,
+                                    parts[i].r.rotation().y,
+                                    parts[i].r.rotation().z,
+                                    parts[i].r.rotation().w);
+        }
+
+        for (let i in parts) {
+            let p = parts[i].lgt.clone();
+            let q = parts[i].lgr.clone();
+
+            if (i >= 5 && i <= 8) console.log("restore", i, p.x, p.y, p.z);
+            if (i >= 5 && i <= 8) console.log("restore q ", i, q.x, q.y, q.z, q.w);
+
+            parts[i].r.setBodyType(2);
+            parts[i].r.setTranslation({x: p.x, y: p.y, z: p.z}, true);
+            parts[i].r.setRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
+            let z = new RAPIER.Vector3(0, 0, 0);
+
+            parts[i].r.setAngvel(z, true);
+            parts[i].r.setLinvel(z, true);
+            parts[i].r.resetForces(true);
+            parts[i].r.resetTorques(true);
+            parts[i].r.recomputeMassPropertiesFromColliders();
+
+            if (i >= 5 && i <= 8) console.log("restore v", i, parts[i].r.linvel(), parts[i].r.angvel());
+
+        }
+        // let p2 = r.g3.lgt.clone();
+        // pointer_target.parent.worldToLocal(p2);
+        // pointer_target.position.set(p2.x, p2.y, p2.z);
+
+
+        for (let i in parts) {
+            if (i >= 5 && i <= 8) console.log("after", i, parts[i].r.translation().x,
+                                    parts[i].r.translation().y,
+                                    parts[i].r.translation().z, parts[i].r.linvel(), parts[i].r.angvel());
+            if (i >= 5 && i <= 8) console.log("after q", i, parts[i].r.rotation().x,
+                                    parts[i].r.rotation().y,
+                                    parts[i].r.rotation().z,
+                                    parts[i].r.rotation().w);
+        }
+
+        console.log("stop frame_i", frame_i, r.g3.r.translation().x,
+                                r.g3.r.translation().y,
+                                r.g3.r.translation().z);
+    }
+
+    console.log("frame_i", frame_i);
+
+    // let p = new THREE.Vector3();
+    // pointer_target.getWorldPosition(p);
+    // let gt = r.g3.r.translation();
+    //
+    // curr_gt.set(gt.x, gt.y, gt.z);
+    // if (!stop_arm_motion) {
+    //
+    //
+    //     lgt.set(gt.x, gt.y, gt.z);
+    //     r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    // }
+    //  else {
+    //     r.g3.r.setTranslation({x: lgt.x, y: lgt.y, z: lgt.z}, true);
+    //     r.g3.r.resetForces(true);
+    //     r.g3.r.resetTorques(true);
+    //     for (let i in parts) {
+    //         parts[i].r.resetForces(true);
+    //         parts[i].r.resetTorques(true);
+    //     }
+    //     let p2 = lgt.clone()
+    //     pointer_target.parent.worldToLocal(p2);
+    //     pointer_target.position.set(p2.x, p2.y, p2.z);
+    // }
+    // r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+
+    for (let i in parts) {
+        if (parts[i].c.attached) continue;
+
+        parts[i].r.wakeUp();
+
+        let q = parts[i].r.rotation();
         let q1 = new THREE.Quaternion();
         q1.set(q.x, q.y, q.z, q.w);
 
-        let p = dyn_parts[i].r.translation();
+        let p = parts[i].r.translation();
         let p1 = new THREE.Vector3();
         p1.set(p.x, p.y, p.z);
 
         let m_body = new THREE.Matrix4();
         m_body.compose(p1, q1, new THREE.Vector3(1, 1, 1));
 
-        let m_parent = dyn_parts[i].m.parent.matrixWorld.clone();
+        let m_parent = parts[i].m.parent.matrixWorld.clone();
         m_parent.invert();
         m_parent.multiply(m_body);
 
-        dyn_parts[i].m.position.set(0, 0, 0);
-        dyn_parts[i].m.quaternion.set(0, 0, 0, 1);
-        dyn_parts[i].m.scale.set(1, 1, 1);
-        dyn_parts[i].m.applyMatrix4(m_parent);
+        parts[i].m.position.set(0, 0, 0);
+        parts[i].m.quaternion.set(0, 0, 0, 1);
+        parts[i].m.scale.set(1, 1, 1);
+        parts[i].m.applyMatrix4(m_parent);
 
-        dyn_parts[i].m.updateWorldMatrix(true, true);
+        parts[i].m.updateWorldMatrix(true, true);
     }
 
-    r.g1_pad.c.touch = "off";
-    r.g2_pad.c.touch = "off";
-    eventQueue.drainContactForceEvents(event => {
-        let d = event.maxForceDirection();
-        let dv = new THREE.Vector3(d.x, d.y, d.z);
-        let c1 = world.getCollider(event.collider1());
-        let c2 = world.getCollider(event.collider2());
-        c1.touch = "on";
-        c2.touch = "on";
-    });
+    // updateKinematic(r.g1);
+    // updateKinematic(r.g1_pad);
+    // updateKinematic(r.g2);
+    // updateKinematic(r.g2_pad);
 
-    let gp1 = r.g1.m.position.clone();
-    let gp2 = r.g2.m.position.clone();
-    if (gripper_open) {
-        if (gp1.x > gripper_open_1) {
-            r.g1.m.position.set(gp1.x-gripper_s, gp1.y, gp1.z);
-        }
-        if (gp2.x < gripper_open_2) {
-            r.g2.m.position.set(gp2.x+gripper_s, gp2.y, gp2.z);
-        }
-    } else {
-        if (gp1.x < gripper_closed_1 && r.g1_pad.c.touch == "off") {
-            r.g1.m.position.set(gp1.x+gripper_s, gp1.y, gp1.z);
-        }
-        if (gp2.x > gripper_closed_2 && r.g2_pad.c.touch == "off") {
-            r.g2.m.position.set(gp2.x-gripper_s, gp2.y, gp2.z);
-        }
-    }
-
-
-//==============================================================================
-
-    stop_arm_motion = false;
-    for (let i in robot_parts) {
-        world.contactsWith(robot_parts[i].c, (c2) => {
-            if (!c2.is_robot && !c2.ignore_controller) {
-                // console.log("stop_arm_motion", lgt, curr_gt)
-                stop_arm_motion = true;
-            }
-        });
-    }
-
-    let p = new THREE.Vector3();
-    pointer_target.getWorldPosition(p);
-    let gt = r.g3.r.translation();
-
-    curr_gt.set(gt.x, gt.y, gt.z);
-    if (!stop_arm_motion) {
-        lgt.set(gt.x, gt.y, gt.z);
-        r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    } else {
-        r.g3.r.setTranslation({x: lgt.x, y: lgt.y, z: lgt.z}, true);
-        let p2 = lgt.clone()
-        pointer_target.parent.worldToLocal(p2);
-        pointer_target.position.set(p2.x, p2.y, p2.z);
-    }
-
-    updateKinematic(r.g1);
-    updateKinematic(r.g1_pad);
-    updateKinematic(r.g2);
-    updateKinematic(r.g2_pad);
-
-    let d = target_direction.clone();
-    d.applyQuaternion(r.base.m.quaternion);
-    platform.setSlideEnabled(true);
-    platform.computeColliderMovement(r.base.c, {x: d.x, y: d.y, z: d.z},
-            0, -1, function(c) {return !c.is_robot;});
-    let pt = platform.computedMovement();
-    let T = r.base.r.translation();
-    r.base.r.setNextKinematicTranslation({x: pt.x+T.x, y: pt.y+T.y, z: pt.z+T.z}, true);
+    // let d = target_direction.clone();
+    // d.applyQuaternion(r.base.m.quaternion);
+    // platform.setSlideEnabled(true);
+    // platform.computeColliderMovement(r.base.c, {x: d.x, y: d.y, z: d.z},
+    //         0, -1, function(c) {return !c.is_robot;});
+    // let pt = platform.computedMovement();
+    // let T = r.base.r.translation();
+    // r.base.r.setNextKinematicTranslation({x: pt.x+T.x, y: pt.y+T.y, z: pt.z+T.z}, true);
 //==============================================================================
 
     world.step(eventQueue);
 
+    for (let i in parts) {
+        if (i >= 5 && i <= 8) console.log("after step ", i, parts[i].r.translation().x,
+                                parts[i].r.translation().y,
+                                parts[i].r.translation().z, parts[i].r.linvel(), parts[i].r.angvel());
+        if (i >= 5 && i <= 8) console.log("after step q", i, parts[i].r.rotation().x,
+                                parts[i].r.rotation().y,
+                                parts[i].r.rotation().z,
+                                parts[i].r.rotation().w);
+    }
+
+
 //==============================================================================
 
-    r.g3.r.recomputeMassPropertiesFromColliders();
-    let q = new THREE.Quaternion();
-    pointer_target.getWorldQuaternion(q);
-    r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-
-    r.base.r.recomputeMassPropertiesFromColliders();
-    let R = r.base.r.rotation();
-    q.set(R.x, R.y, R.z, R.w);
-    q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
-    r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    // r.g3.r.recomputeMassPropertiesFromColliders();
+    // let q = new THREE.Quaternion();
+    // pointer_target.getWorldQuaternion(q);
+    // r.g3.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    //
+    // r.base.r.recomputeMassPropertiesFromColliders();
+    // let R = r.base.r.rotation();
+    // q.set(R.x, R.y, R.z, R.w);
+    // q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
+    // r.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
 //==============================================================================
 
 
@@ -460,7 +576,33 @@ window.addEventListener('keydown', function(event) {
     let update_position = false;
     let update_rotation = false;
 
+
     switch ( event.code ) {
+        case "KeyN":
+            for (let i in parts) {
+                let q = parts[i].r.rotation();
+                let q1 = new THREE.Quaternion();
+                q1.set(q.x, q.y, q.z, q.w);
+                let p = parts[i].r.translation();
+                let p1 = new THREE.Vector3();
+                p1.set(p.x, p.y, p.z);
+                parts[i].lgt = p1;
+                parts[i].lgr = q1;
+                console.log("save", i, parts[i].lgt, parts[i].lgr);
+            }
+            break;
+        case "KeyM":
+            for (let i in parts) {
+                let p = parts[i].lgt;
+                let q = parts[i].lgr;
+                parts[i].r.setTranslation({x: p.x, y: p.y, z: p.z}, true);
+                parts[i].r.setRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+                // console.log("restore", i, parts[i].lgt, parts[i].lgr);
+            }
+            let p2 = r.g3.lgt.clone();
+            pointer_target.parent.worldToLocal(p2);
+            pointer_target.position.set(p2.x, p2.y, p2.z);
+            break;
         case "KeyT":
             transform_ctrl.setMode('translate');
             break;
