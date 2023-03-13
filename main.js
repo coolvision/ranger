@@ -314,42 +314,45 @@ function render() {
 
 //==============================================================================
 
-    // stop_arm_motion = false;
-    // for (let i in parts) {
-    //     world.contactsWith(parts[i].c, (c2) => {
-    //         if (!c2.is_robot && !c2.ignore_controller) {
-    //             if (parts[i].c.contactCollider(c2, 0.001)) {
-    //                 console.log("stop_arm_motion", i, c2);
-    //                 // stop_arm_motion = true;
-    //             }
-    //         }
-    //     });
-    // }
-    //
-    // for (let j in joints) {
-    //     let a1 = joints[j].anchor1();
-    //     let a2 = joints[j].anchor2();
-    //
-    //     let p1 = new THREE.Vector3();
-    //     p1.set(a1.x, a1.y, a1.z);
-    //     let p2 = new THREE.Vector3();
-    //     p2.set(a2.x, a2.y, a2.z);
-    //
-    //     // console.log("joint L", j, p1, p2);
-    //
-    //     let w1 = p1.clone();
-    //     let w2 = p2.clone();
-    //
-    //     joints[j].r1.m.localToWorld(w1);
-    //     joints[j].r2.m.localToWorld(w2);
-    //
-    //     if (Math.abs(w1.x-w2.x) > 0.01 ||
-    //         Math.abs(w1.y-w2.y) > 0.01 ||
-    //         Math.abs(w1.z-w2.z) > 0.01) {
-    //         console.log("joint W", j, "w1", w1.x.toFixed(3), w1.y.toFixed(3), w1.z.toFixed(3),
-    //             "w2",  w2.x.toFixed(3), w2.y.toFixed(3), w2.z.toFixed(3));
-    //     }
-    // }
+    stop_arm_motion = false;
+    for (let i in parts) {
+        if (!parts[i].c.attached) continue;
+        world.contactsWith(parts[i].c, (c2) => {
+            if (!c2.is_robot && !c2.ignore_controller) {
+                if (parts[i].c.contactCollider(c2, 0.001)) {
+                    console.log("stop_arm_motion", i, c2);
+                    // stop_arm_motion = true;
+                }
+            }
+        });
+    }
+
+    for (let j in joints) {
+        let a1 = joints[j].anchor1();
+        let a2 = joints[j].anchor2();
+
+        let p1 = new THREE.Vector3();
+        p1.set(a1.x, a1.y, a1.z);
+        let p2 = new THREE.Vector3();
+        p2.set(a2.x, a2.y, a2.z);
+
+        // console.log("joint L", j, p1, p2);
+
+        let w1 = p1.clone();
+        let w2 = p2.clone();
+
+        joints[j].r1.m.localToWorld(w1);
+        joints[j].r2.m.localToWorld(w2);
+
+        if (Math.abs(w1.x-w2.x) > 0.01 ||
+            Math.abs(w1.y-w2.y) > 0.01 ||
+            Math.abs(w1.z-w2.z) > 0.01) {
+            // console.log("joint W", j, "w1", w1.x.toFixed(3), w1.y.toFixed(3), w1.z.toFixed(3),
+            //     "w2",  w2.x.toFixed(3), w2.y.toFixed(3), w2.z.toFixed(3));
+
+            // stop_arm_motion = true;
+        }
+    }
 
     // if (!stop_arm_motion) {
     //
@@ -394,24 +397,16 @@ function render() {
     // r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     //
 
-
-    let p = new THREE.Vector3();
-    pointer_target.getWorldPosition(p);
-    let gt = r.g3.r.translation();
-    let t = {x: p.x-gt.x, y: p.y-gt.y, z: p.z-gt.z};
-    gripper.computeColliderMovement(r.g3.c, t,
-            0, -1, function(c) {return !(c.is_robot || c.ignore_controller);});
-    let cm = gripper.computedMovement();
-    r.g3.r.setNextKinematicTranslation({x: gt.x+cm.x, y: gt.y+cm.y, z: gt.z+cm.z}, true);
-
-
-    // platform.setSlideEnabled(true);
-    // platform.computeColliderMovement(r.base.c, {x: d.x, y: d.y, z: d.z},
-    //         0, -1, function(c) {return !c.is_robot;});
-    // let pt = platform.computedMovement();
-    // let T = r.base.r.translation();
-    // r.base.r.setNextKinematicTranslation({x: pt.x+T.x, y: pt.y+T.y, z: pt.z+T.z}, true);
-
+    if (!stop_arm_motion) {
+        let p = new THREE.Vector3();
+        pointer_target.getWorldPosition(p);
+        let gt = r.g3.r.translation();
+        let t = {x: p.x-gt.x, y: p.y-gt.y, z: p.z-gt.z};
+        gripper.computeColliderMovement(r.g3.c, t,
+                0, -1, function(c) {return !(c.is_robot || c.ignore_controller);});
+        let cm = gripper.computedMovement();
+        r.g3.r.setNextKinematicTranslation({x: gt.x+cm.x, y: gt.y+cm.y, z: gt.z+cm.z}, true);
+    }
 
     for (let i in parts) {
         if (parts[i].c.attached) continue;
