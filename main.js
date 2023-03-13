@@ -347,66 +347,113 @@ function render() {
         if (Math.abs(w1.x-w2.x) > 0.01 ||
             Math.abs(w1.y-w2.y) > 0.01 ||
             Math.abs(w1.z-w2.z) > 0.01) {
-            // console.log("joint W", j, "w1", w1.x.toFixed(3), w1.y.toFixed(3), w1.z.toFixed(3),
-            //     "w2",  w2.x.toFixed(3), w2.y.toFixed(3), w2.z.toFixed(3));
 
-            // stop_arm_motion = true;
+            let p3 = new THREE.Vector3();
+            let p4 = new THREE.Vector3();
+            joints[j].r1.m.localToWorld(p3);
+            joints[j].r2.m.localToWorld(p4);
+
+            console.log("strain", j, "w1", w1.x, w1.y, w1.z, "w2",  w2.x, w2.y, w2.z);
+            console.log("z", j, "p1", p3.x, p3.y, p3.z, "p2",  p4.x, p4.y, p4.z);
+
+            stop_arm_motion = true;
+        } else {
+
+            let p3 = new THREE.Vector3();
+            let p4 = new THREE.Vector3();
+            joints[j].r1.m.localToWorld(p3);
+            joints[j].r2.m.localToWorld(p4);
+
+            if (j == 5) {
+                console.log("fine", j, "w1", w1.x, w1.y, w1.z, "w2",  w2.x, w2.y, w2.z);
+                console.log("z", j, "p1", p3.x, p3.y, p3.z, "p2",  p4.x, p4.y, p4.z);
+            }
+
+
+
         }
     }
 
-    // if (!stop_arm_motion) {
-    //
-    //     for (let i in parts) {
-    //         let q = parts[i].r.rotation();
-    //         let q1 = new THREE.Quaternion();
-    //         q1.set(q.x, q.y, q.z, q.w);
-    //         let p = parts[i].r.translation();
-    //         let p1 = new THREE.Vector3();
-    //         p1.set(p.x, p.y, p.z);
-    //         parts[i].lgt = p1;
-    //         parts[i].lgr = q1;
-    //         if (parts[i].t == "dynamic") parts[i].r.setBodyType(0);
-    //     }
-    //
-    //     let p = new THREE.Vector3();
-    //     pointer_target.getWorldPosition(p);
-    //     r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    //
-    // } else {
-    //
-    //     for (let i in parts) {
-    //         let p = parts[i].lgt.clone();
-    //         let q = parts[i].lgr.clone();
-    //
-    //         parts[i].r.setBodyType(2);
-    //         parts[i].r.setTranslation({x: p.x, y: p.y, z: p.z}, true);
-    //         parts[i].r.setRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-    //
-    //         let z = new RAPIER.Vector3(0, 0, 0);
-    //
-    //         parts[i].r.setAngvel(z, true);
-    //         parts[i].r.setLinvel(z, true);
-    //         parts[i].r.resetForces(true);
-    //         parts[i].r.resetTorques(true);
-    //         parts[i].r.recomputeMassPropertiesFromColliders();
-    //     }
-    // }
+    let p = new THREE.Vector3();
+    pointer_target.getWorldPosition(p);
+    let gt = r.g3.r.translation();
+    let t = {x: p.x-gt.x, y: p.y-gt.y, z: p.z-gt.z};
+    gripper.computeColliderMovement(r.g3.c, t,
+            0, -1, function(c) {return !(c.is_robot || c.ignore_controller);});
+    let cm = gripper.computedMovement();
+    r.g3.r.setNextKinematicTranslation({x: gt.x+cm.x, y: gt.y+cm.y, z: gt.z+cm.z}, true);
 
+    if (!stop_arm_motion) {
+
+        console.log("!stop_arm_motion");
+
+        for (let i in parts) {
+            let q = parts[i].r.rotation();
+            let q1 = new THREE.Quaternion();
+            q1.set(q.x, q.y, q.z, q.w);
+            let p = parts[i].r.translation();
+            let p1 = new THREE.Vector3();
+            p1.set(p.x, p.y, p.z);
+            parts[i].lgt = p1;
+            parts[i].lgr = q1;
+            if (parts[i].t == "dynamic") parts[i].r.setBodyType(0);
+
+            if (i >= 6 && i <= 7) console.log("save", i, parts[i].r.translation().x,
+                parts[i].r.translation().y,
+                parts[i].r.translation().z);
+        }
+
+
+
+        // let p = new THREE.Vector3();
+        // pointer_target.getWorldPosition(p);
+        // r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+    } else {
+
+        for (let i in parts) {
+            if (parts[i].lgt && parts[i].lgr) {
+                let p = parts[i].lgt.clone();
+                let q = parts[i].lgr.clone();
+
+                parts[i].r.setBodyType(2);
+                parts[i].r.setTranslation({x: p.x, y: p.y, z: p.z}, true);
+                parts[i].r.setRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+
+                let z = new RAPIER.Vector3(0, 0, 0);
+
+                parts[i].r.setAngvel(z, true);
+                parts[i].r.setLinvel(z, true);
+                parts[i].r.resetForces(true);
+                parts[i].r.resetTorques(true);
+                parts[i].r.recomputeMassPropertiesFromColliders();
+
+                if (i >= 6 && i <= 7) console.log("restore", i, parts[i].r.translation().x,
+                    parts[i].r.translation().y,
+                    parts[i].r.translation().z);
+            }
+        }
+
+
+
+
+        // if ( r.g3.lgt) {
+        //     let p2 = r.g3.lgt.clone();
+        //     pointer_target.parent.worldToLocal(p2);
+        //     pointer_target.position.set(p2.x, p2.y, p2.z);
+        // }
+
+    }
+    //     // }
+    // }
+    //
     // let p = new THREE.Vector3();
     // pointer_target.getWorldPosition(p);
     // r.g3.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
     //
+    //
+    // if (!stop_arm_motion) {
 
-    if (!stop_arm_motion) {
-        let p = new THREE.Vector3();
-        pointer_target.getWorldPosition(p);
-        let gt = r.g3.r.translation();
-        let t = {x: p.x-gt.x, y: p.y-gt.y, z: p.z-gt.z};
-        gripper.computeColliderMovement(r.g3.c, t,
-                0, -1, function(c) {return !(c.is_robot || c.ignore_controller);});
-        let cm = gripper.computedMovement();
-        r.g3.r.setNextKinematicTranslation({x: gt.x+cm.x, y: gt.y+cm.y, z: gt.z+cm.z}, true);
-    }
+
 
     for (let i in parts) {
         if (parts[i].c.attached) continue;
