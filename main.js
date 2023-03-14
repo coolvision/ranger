@@ -82,7 +82,7 @@ async function init() {
     size = 0.05;
     for (let i = 1; i < 5; i++) {
         for (let j = 1; j < 5; j++) {
-            let p = new THREE.Vector3(-0.25 + i/10, 2, -0.25 + j/10);
+            let p = new THREE.Vector3(-0.25 + i/10, 1, -0.25 + j/10);
             p.z += 0.75;
             let c = new THREE.Color();
             c.setHex(0xffffff * Math.random());
@@ -105,6 +105,16 @@ function render() {
     }
 
     robot.updateModels();
+
+    robot.resetGripperSensors();
+    eventQueue.drainContactForceEvents(event => {
+        let d = event.maxForceDirection();
+        let dv = new THREE.Vector3(d.x, d.y, d.z);
+        let c1 = world.getCollider(event.collider1());
+        let c2 = world.getCollider(event.collider2());
+        c1.touch = "on";
+        c2.touch = "on";
+    });
     robot.updateGripperState();
 
     robot.setPlatformTranslation(target_direction);
@@ -198,7 +208,7 @@ window.addEventListener('keydown', function(event) {
             world.step(eventQueue);
             break;
         case "KeyG":
-            gripper_open = !gripper_open;
+            robot.gripper_open = !robot.gripper_open;
             break;
         case "KeyW":
             p.set(0, 0, 0.01);

@@ -108,22 +108,16 @@ export class Robot {
         }
     }
 
-    updateGripperState() {
-
+    resetGripperSensors() {
         this.g1_pad.c.touch = "off";
         this.g2_pad.c.touch = "off";
-        eventQueue.drainContactForceEvents(event => {
-            let d = event.maxForceDirection();
-            let dv = new THREE.Vector3(d.x, d.y, d.z);
-            let c1 = world.getCollider(event.collider1());
-            let c2 = world.getCollider(event.collider2());
-            c1.touch = "on";
-            c2.touch = "on";
-        });
+    }
+
+    updateGripperState() {
 
         let gp1 = this.g1.m.position.clone();
         let gp2 = this.g2.m.position.clone();
-        if (gripper_open) {
+        if (this.gripper_open) {
             if (gp1.x > this.gripper_open_1) {
                 this.g1.m.position.set(gp1.x-this.gripper_s, gp1.y, gp1.z);
             }
@@ -139,10 +133,10 @@ export class Robot {
             }
         }
 
-        updateRigidBody(r.g1);
-        updateRigidBody(r.g1_pad);
-        updateRigidBody(r.g2);
-        updateRigidBody(r.g2_pad);
+        this.updateRigidBody(this.g1);
+        this.updateRigidBody(this.g1_pad);
+        this.updateRigidBody(this.g2);
+        this.updateRigidBody(this.g2_pad);
     }
 
     updateRigidBody(part) {
@@ -159,10 +153,10 @@ export class Robot {
     setPlatformTranslation(target_direction) {
         let d = target_direction.clone();
         d.applyQuaternion(this.base.m.quaternion);
-        platform.setSlideEnabled(true);
-        platform.computeColliderMovement(this.base.c, {x: d.x, y: d.y, z: d.z},
+        this.platform.setSlideEnabled(true);
+        this.platform.computeColliderMovement(this.base.c, {x: d.x, y: d.y, z: d.z},
                 0, -1, function(c) {return !c.is_robot;});
-        let pt = platform.computedMovement();
+        let pt = this.platform.computedMovement();
         let T = this.base.r.translation();
         this.base.r.setNextKinematicTranslation({x: pt.x+T.x, y: pt.y+T.y, z: pt.z+T.z}, true);
     }
@@ -170,7 +164,8 @@ export class Robot {
     setPlatformRotation(target_rotation) {
         this.base.r.recomputeMassPropertiesFromColliders();
         let R = this.base.r.rotation();
-        q.set(R.x, this.y, this.z, this.w);
+        let q = new THREE.Quaternion();
+        q.set(R.x, R.y, R.z, R.w);
         q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
         this.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
@@ -180,9 +175,9 @@ export class Robot {
         pointer_target.getWorldPosition(p);
         let gt = this.g3.r.translation();
         let t = {x: p.x-gt.x, y: p.y-gt.y, z: p.z-gt.z};
-        gripper.computeColliderMovement(r.g3.c, t,
+        this.gripper.computeColliderMovement(this.g3.c, t,
                 0, -1, function(c) {return !(c.is_robot || c.ignore_controller);});
-        let cm = gripper.computedMovement();
+        let cm = this.gripper.computedMovement();
         this.g3.r.setNextKinematicTranslation({x: gt.x+cm.x, y: gt.y+cm.y, z: gt.z+cm.z}, true);
     }
 
@@ -271,21 +266,7 @@ export class Robot {
                 joints[j].r1.m.localToWorld(p3);
                 joints[j].r2.m.localToWorld(p4);
 
-                console.log("strain", j, "w1", w1.x, w1.y, w1.z, "w2",  w2.x, w2.y, w2.z);
-                console.log("z", j, "p1", p3.x, p3.y, p3.z, "p2",  p4.x, p4.y, p4.z);
-
                 stop_arm_motion = true;
-            } else {
-
-                let p3 = new THREE.Vector3();
-                let p4 = new THREE.Vector3();
-                joints[j].r1.m.localToWorld(p3);
-                joints[j].r2.m.localToWorld(p4);
-
-                if (j == 5) {
-                    console.log("fine", j, "w1", w1.x, w1.y, w1.z, "w2",  w2.x, w2.y, w2.z);
-                    console.log("z", j, "p1", p3.x, p3.y, p3.z, "p2",  p4.x, p4.y, p4.z);
-                }
             }
         }
     }
