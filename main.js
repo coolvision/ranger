@@ -7,13 +7,14 @@ import { Robot } from './robot.js'
 import * as utils from './rapier_utils.js'
 
 let container;
-let camera, scene, renderer;
+let camera, scene, renderer, controls;
 
 let transform_ctrl;
 let pointer_target = new THREE.Mesh();
 
 let world;
 let eventQueue;
+let ground_collider;
 let boxes = [];
 
 let robot;
@@ -40,23 +41,28 @@ async function init() {
     ip.erp = 1.0;
     ip.maxStabilizationIterations = 10;
 
-    robot = new Robot();
+    let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 1, 10.0);
+    groundColliderDesc.setTranslation(0, -1, 0);
+    ground_collider = world.createCollider(groundColliderDesc);
+    ground_collider.ignore_controller = true;
 
-    // r.base.r.setNextKinematicTranslation({x: 0, y: r.base.h/2, z: 0}, true);
-    // world.step(eventQueue);
-    // r.base.r.recomputeMassPropertiesFromColliders();
-    // r.base.m.add(pointer_target);
+    robot = new Robot(world, scene);
 
-    // transform_ctrl = new TransformControls(camera, renderer.domElement);
-    // transform_ctrl.addEventListener('change', render);
-    // transform_ctrl.addEventListener('dragging-changed', function (event) {
-    //     controls.enabled = ! event.value;
-    // });
-    // transform_ctrl.size = 0.75
-    // transform_ctrl.setSpace("local");
-    // transform_ctrl.attach(pointer_target);
-    //
-    // scene.add(transform_ctrl);
+    robot.base.r.setNextKinematicTranslation({x: 0, y: robot.base.h/2, z: 0}, true);
+    world.step(eventQueue);
+    robot.base.r.recomputeMassPropertiesFromColliders();
+    robot.base.m.add(pointer_target);
+
+    transform_ctrl = new TransformControls(camera, renderer.domElement);
+    transform_ctrl.addEventListener('change', render);
+    transform_ctrl.addEventListener('dragging-changed', function (event) {
+        controls.enabled = ! event.value;
+    });
+    transform_ctrl.size = 0.75
+    transform_ctrl.setSpace("local");
+    transform_ctrl.attach(pointer_target);
+
+    scene.add(transform_ctrl);
 
     let size = 0.5
     for (let i = 0; i < 1; i++) {
@@ -76,7 +82,7 @@ async function init() {
     size = 0.05;
     for (let i = 1; i < 5; i++) {
         for (let j = 1; j < 5; j++) {
-            let p = new THREE.Vector3(-0.25 + i/10, 1, -0.25 + j/10);
+            let p = new THREE.Vector3(-0.25 + i/10, 2, -0.25 + j/10);
             p.z += 0.75;
             let c = new THREE.Color();
             c.setHex(0xffffff * Math.random());
@@ -87,6 +93,28 @@ async function init() {
     }
 
     renderer.setAnimationLoop(render);
+}
+
+function render() {
+
+    for (let i = 0; i < boxes.length; i++) {
+        let p = boxes[i].r.translation();
+        let q = boxes[i].r.rotation();
+        boxes[i].m.position.set(p.x, p.y, p.z);
+        boxes[i].m.quaternion.set(q.x, q.y, q.z, q.w);
+    }
+
+    robot.updateModels();
+    robot.updateGripperState();
+
+    robot.setPlatformTranslation(target_direction);
+    robot.setGripperTranslation(pointer_target);
+    world.step(eventQueue);
+
+    robot.setPlatformRotation(target_rotation);
+    robot.setGripperRotation(pointer_target);
+
+    renderer.render(scene, camera);
 }
 
 function sceneSetup() {
@@ -124,23 +152,9 @@ function sceneSetup() {
     helper.material.transparent = true;
     scene.add(helper);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
+    controls = new OrbitControls(camera, renderer.domElement);
     controls.damping = 0.2;
     controls.addEventListener('change', render);
-}
-
-function render() {
-
-    for (let i = 0; i < boxes.length; i++) {
-        let p = boxes[i].r.translation();
-        let q = boxes[i].r.rotation();
-        boxes[i].m.position.set(p.x, p.y, p.z);
-        boxes[i].m.quaternion.set(q.x, q.y, q.z, q.w);
-    }
-
-    world.step(eventQueue);
-
-    renderer.render(scene, camera);
 }
 
 function onWindowResize() {
