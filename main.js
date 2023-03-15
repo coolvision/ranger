@@ -8,7 +8,7 @@ import * as utils from './rapier_utils.js'
 
 let container;
 let camera, scene, renderer, controls;
-
+//
 let transform_ctrl;
 let pointer_target = new THREE.Mesh();
 
@@ -31,7 +31,18 @@ async function init() {
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
-    sceneSetup();
+    // sceneSetup();
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0);
+
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+    // camera.position.set(2.5, 2.5, 2.5);
+
+    camera.position.set(0, 1, 1.2);
+
+    scene.add(camera);
+
 
     await RAPIER.init();
     let gravity = {x: 0.0, y: -9.81, z: 0.0};
@@ -92,7 +103,40 @@ async function init() {
         }
     }
 
+//==============================================================================
+    scene.add( new THREE.AmbientLight(0xf0f0f0));
+    const light = new THREE.SpotLight(0xffffff, 1.5);
+    light.position.set(0, 15, 2);
+    light.angle = Math.PI * 0.2;
+    light.castShadow = true;
+    light.shadow.camera.near = 2;
+    light.shadow.camera.far = 20;
+    light.shadow.bias = - 0.000222;
+    light.shadow.mapSize.width = 1024;
+    light.shadow.mapSize.height = 1024;
+    scene.add(light);
+
+    const planeGeometry = new THREE.PlaneGeometry(20, 20);
+    planeGeometry.rotateX(- Math.PI / 2);
+    const planeMaterial = new THREE.ShadowMaterial({ color: 0x000000, opacity: 0.2});
+
+    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    plane.position.y = - 2;
+    plane.receiveShadow = true;
+    scene.add( plane );
+
+    const helper = new THREE.GridHelper(20, 20);
+    helper.material.opacity = 0.25;
+    helper.material.transparent = true;
+    scene.add( helper );
+
+    // Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.damping = 0.2;
+    controls.addEventListener('change', render);
+
     renderer.setAnimationLoop(render);
+
 }
 
 function render() {
