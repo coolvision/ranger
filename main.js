@@ -148,6 +148,8 @@ function render() {
         boxes[i].m.quaternion.set(q.x, q.y, q.z, q.w);
     }
 
+    robot.setGripperTranslation(pointer_target);
+
     robot.updateModels();
 
     robot.resetGripperSensors();
@@ -162,7 +164,6 @@ function render() {
     robot.updateGripperState();
 
     robot.setPlatformTranslation(target_direction);
-    robot.setGripperTranslation(pointer_target);
     world.step(eventQueue);
 
     robot.setPlatformRotation(target_rotation);
