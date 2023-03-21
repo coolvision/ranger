@@ -24,22 +24,46 @@ let target_rotation = new THREE.Quaternion();
 await init();
 async function init() {
 
-    container = document.getElementById('app');
+    container = document.querySelector('body');
+
     renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    let w = window.visualViewport.width;
+    let h = window.visualViewport.height;
+    // console.log("size", w, h, window.innerWidth, window.innerHeight);
+    renderer.setSize(w, h);
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
+
+
+    window.addEventListener('resize', function() {
+
+        let w = window.visualViewport.width;
+        let h = window.visualViewport.height;
+
+        // console.log("resize", w, h, window.innerWidth, window.innerHeight);
+
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+        render();
+    });
+
+
+    let canvas = document.querySelector("canvas");
+    canvas.className = 'overflow-hidden';
 
     // sceneSetup();
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
 
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera = new THREE.PerspectiveCamera(70, w / h, 0.1, 100);
     // camera.position.set(2.5, 2.5, 2.5);
 
-    camera.position.set(0, 1, 1.2);
+    // camera.position.set(0, 1, 1.2);
+    camera.position.set(0, 1.5, 2.2);
 
     scene.add(camera);
 
@@ -76,13 +100,17 @@ async function init() {
     scene.add(transform_ctrl);
 
     let size = 0.5
-    for (let i = 0; i < 1; i++) {
-        let p = new THREE.Vector3(0, 1, 0.75);
-        let c = new THREE.Color();
-        c.setHex(0xffffff * Math.random());
-        let box = utils.addBody("dynamic", "cuboid", world, scene, 1, 0, -1, 100, size, size, size, p.x, p.y, p.z, c);
-        boxes.push(box);
-    }
+    let p = new THREE.Vector3(0, 1, 0.75);
+    let c = new THREE.Color();
+    c.setHex(0xffffff * Math.random());
+    let box = utils.addBody("dynamic", "cuboid", world, scene, 1, 0, -1, 100, size, size, size, p.x, p.y, p.z, c);
+    boxes.push(box);
+
+    size = 0.4
+    p.set(0.55, 1, 0.5);
+    c.setHex(0xffffff * Math.random());
+    let box2 = utils.addBody("dynamic", "cuboid", world, scene, 1, 0, -1, 100, size, size, size, p.x, p.y, p.z, c);
+    boxes.push(box2);
 
     for (let i = 0; i < 100; i++) {
         world.step(eventQueue);
@@ -131,13 +159,15 @@ async function init() {
     scene.add( helper );
 
     // Controls
-    const controls = new OrbitControls(camera, renderer.domElement);
+    controls = new OrbitControls(camera, renderer.domElement);
     controls.damping = 0.2;
+    controls.enableZoom = false;
     controls.addEventListener('change', render);
 
     renderer.setAnimationLoop(render);
 
 }
+
 
 function render() {
 
@@ -172,19 +202,12 @@ function render() {
     renderer.render(scene, camera);
 }
 
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    render();
-}
-
 window.addEventListener('keyup', function(event) {
     if (event.code == "KeyW" || event.code == "KeyS") {
         target_direction.set(0, 0, 0);
     }
     if (event.code == "KeyA" || event.code == "KeyD") {
-        let R = r.base.r.rotation();
+        let R = robot.base.r.rotation();
         target_rotation.set(R.x, R.y, R.z, R.w);
     }
 });
@@ -210,7 +233,8 @@ window.addEventListener('keydown', function(event) {
             transform_ctrl.setMode('rotate');
             break;
         case "KeyZ":
-            world.step(eventQueue);
+            controls.enableZoom = !controls.enableZoom;
+            // world.step(eventQueue);
             break;
         case "KeyG":
             robot.gripper_open = !robot.gripper_open;
@@ -241,7 +265,7 @@ window.addEventListener('keydown', function(event) {
         angle = THREE.MathUtils.degToRad(angle);
         let q = new THREE.Quaternion();
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-        q.multiply(r.base.m.quaternion);
+        q.multiply(robot.base.m.quaternion);
         target_rotation = q;
     }
 });
