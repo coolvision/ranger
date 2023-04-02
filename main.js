@@ -21,6 +21,11 @@ let robot;
 let target_direction = new THREE.Vector3();
 let target_rotation = new THREE.Quaternion();
 
+let socket = new WebSocket("ws://localhost:8000/websocket");
+socket.addEventListener("message", (event) => {
+  console.log(event.data);
+});
+
 await init();
 async function init() {
 
@@ -200,6 +205,9 @@ function render() {
     robot.setGripperRotation(pointer_target);
 
     renderer.render(scene, camera);
+
+    if (socket.readyState == 1)
+        socket.send("*");
 }
 
 window.addEventListener('keyup', function(event) {
