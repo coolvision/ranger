@@ -8,7 +8,8 @@ import * as utils from './rapier_utils.js'
 
 let container;
 let camera, scene, renderer, controls;
-//
+let camera2, renderer2;
+
 let transform_ctrl;
 let pointer_target = new THREE.Mesh();
 
@@ -31,16 +32,20 @@ async function init() {
 
     container = document.querySelector('body');
 
+    renderer2 = new THREE.WebGLRenderer({antialias: true});
+    renderer2.setPixelRatio(1);
+    renderer2.shadowMap.enabled = true;
+    renderer2.domElement.className = 'overflow-hidden absolute ba';
+    renderer2.setSize(256, 256);
+    container.appendChild(renderer2.domElement);
+
     renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setPixelRatio(window.devicePixelRatio);
-
     let w = window.visualViewport.width;
     let h = window.visualViewport.height;
-    // console.log("size", w, h, window.innerWidth, window.innerHeight);
     renderer.setSize(w, h);
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
-
 
     window.addEventListener('resize', function() {
 
@@ -56,22 +61,15 @@ async function init() {
     });
 
 
-    let canvas = document.querySelector("canvas");
-    canvas.className = 'overflow-hidden';
-
-    // sceneSetup();
+    // let canvas = document.querySelector("canvas");
+    // canvas.className = 'overflow-hidden absolute ba';
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
 
     camera = new THREE.PerspectiveCamera(70, w / h, 0.1, 100);
-    // camera.position.set(2.5, 2.5, 2.5);
-
-    // camera.position.set(0, 1, 1.2);
     camera.position.set(0, 1.5, 2.2);
-
     scene.add(camera);
-
 
     await RAPIER.init();
     let gravity = {x: 0.0, y: -9.81, z: 0.0};
@@ -92,6 +90,14 @@ async function init() {
     world.step(eventQueue);
     robot.base.r.recomputeMassPropertiesFromColliders();
     robot.base.m.add(pointer_target);
+
+
+    camera2 = new THREE.PerspectiveCamera(70,1, 0.1, 100);
+    robot.base.m.add(camera2);
+    camera2.position.set(0, 1.5, 0);
+    camera2.rotateY(Math.PI);
+    camera2.rotateX(-Math.PI / 4);
+
 
     transform_ctrl = new TransformControls(camera, renderer.domElement);
     transform_ctrl.addEventListener('change', render);
@@ -206,8 +212,17 @@ function render() {
 
     renderer.render(scene, camera);
 
-    if (socket.readyState == 1)
-        socket.send("*");
+    renderer2.render(scene, camera2);
+
+    if (socket.readyState == 1) {
+        // var gl = renderer2.getContext();
+        // var pixels = new Uint8Array(256 * 256 * 4);
+        // gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+        // socket.send(pixels);
+        let imgData = renderer2.domElement.toDataURL('image/png');
+        console.log("imgData", imgData)
+        socket.send(imgData);
+    }
 }
 
 window.addEventListener('keyup', function(event) {

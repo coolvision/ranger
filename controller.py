@@ -5,13 +5,15 @@ import tornado.websocket
 from threading import Thread
 
 import pygame
+import io
+import base64
 
 pygame.init()
-window = pygame.display.set_mode((300, 300))
+window = pygame.display.set_mode((256, 256), pygame.RESIZABLE)
 clock = pygame.time.Clock()
-rect = pygame.Rect(0, 0, 20, 20)
-rect.center = window.get_rect().center
-vel = 5
+# rect = pygame.Rect(0, 0, 20, 20)
+# rect.center = window.get_rect().center
+# vel = 5
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
@@ -31,7 +33,14 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             client.write_message(message)
 
     def on_message(self, message):
-        print("received", message)
+        # print("received", message)
+        str = message[message.find(",")+1:]
+        str = io.BytesIO(base64.b64decode(str))
+        img = pygame.image.load(str)
+        window.fill(0)
+        window.blit(img, (0, 0))
+        pygame.display.update()
+
 
     def check_origin(self, origin):
         return True
@@ -47,24 +56,12 @@ def main():
         WebSocketHandler.send_message("hello!"), 500
         # print("send hello!")
 
-    periodic_callback = tornado.ioloop.PeriodicCallback(send, 500)
-    periodic_callback.start()
-
-    # io_loop.start()
-    # application = web.Application([('/websocket', WebSocketHandler)])
-    # application.listen(8001)
-    # ioloop.IOLoop.instance().start()
+    # periodic_callback = tornado.ioloop.PeriodicCallback(send, 500)
+    # periodic_callback.start()
 
     t = Thread(target=io_loop.start)
     t.daemon = True
     t.start()
-
-    #
-    # box = geometry.Box([0.5, 0.5, 0.5])
-    # print("add_callback")
-    # io_loop.add_callback(lambda: vis.set_object(box))
-    # io_loop.add_callback(lambda: vis.set_property(Path(("Background",)), "top_color", [1, 0, 0]))
-
 
     run = True
     while run:
@@ -77,15 +74,15 @@ def main():
 
         keys = pygame.key.get_pressed()
 
-        rect.x += (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * vel
-        rect.y += (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * vel
+        # rect.x += (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * vel
+        # rect.y += (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * vel
+        #
+        # rect.centerx = rect.centerx % window.get_width()
+        # rect.centery = rect.centery % window.get_height()
 
-        rect.centerx = rect.centerx % window.get_width()
-        rect.centery = rect.centery % window.get_height()
-
-        window.fill(0)
-        pygame.draw.rect(window, (255, 0, 0), rect)
-        pygame.display.flip()
+        # window.fill(0)
+        # pygame.draw.rect(window, (255, 0, 0), rect)
+        # pygame.display.flip()
 
     pygame.quit()
     exit()
