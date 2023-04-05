@@ -9,8 +9,10 @@ import io
 import base64
 
 pygame.init()
-window = pygame.display.set_mode((256, 256), pygame.RESIZABLE)
+window = pygame.display.set_mode((512, 512), pygame.RESIZABLE)
 clock = pygame.time.Clock()
+# icon = pygame.image.load('icon.png')
+# pygame.display.set_icon(icon)
 # rect = pygame.Rect(0, 0, 20, 20)
 # rect.center = window.get_rect().center
 # vel = 5
@@ -28,7 +30,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     @classmethod
     def send_message(cls, message: str):
-        print(f"message {message} to {len(cls.clients)}")
+        # print(f"message {message} to {len(cls.clients)}")
         for client in cls.clients:
             client.write_message(message)
 
@@ -46,14 +48,13 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         return True
 
 def main():
-
     app = tornado.web.Application([("/websocket", WebSocketHandler)])
     app.listen(8000)
 
     io_loop = tornado.ioloop.IOLoop.current()
 
     def send():
-        WebSocketHandler.send_message("hello!"), 500
+        WebSocketHandler.send_message("hello!")
         # print("send hello!")
 
     # periodic_callback = tornado.ioloop.PeriodicCallback(send, 500)
@@ -71,8 +72,19 @@ def main():
                 run = False
             if event.type == pygame.KEYDOWN:
                 print(pygame.key.name(event.key))
+                if event.key == pygame.K_ESCAPE:
+                    run = False
 
         keys = pygame.key.get_pressed()
+
+        send = {
+            "left": keys[pygame.K_LEFT],
+            "right": keys[pygame.K_RIGHT],
+            "up": keys[pygame.K_UP],
+            "down": keys[pygame.K_DOWN],
+        }
+        # print("send", send)
+        WebSocketHandler.send_message(send)
 
         # rect.x += (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * vel
         # rect.y += (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * vel

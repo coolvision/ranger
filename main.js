@@ -9,7 +9,7 @@ import * as utils from './rapier_utils.js'
 let container;
 let camera, scene, renderer, controls;
 let camera2, renderer2;
-
+let fp_image_size = 512;
 let transform_ctrl;
 let pointer_target = new THREE.Mesh();
 
@@ -22,10 +22,7 @@ let robot;
 let target_direction = new THREE.Vector3();
 let target_rotation = new THREE.Quaternion();
 
-let socket = new WebSocket("ws://localhost:8000/websocket");
-socket.addEventListener("message", (event) => {
-  console.log(event.data);
-});
+let socket;
 
 await init();
 async function init() {
@@ -36,7 +33,7 @@ async function init() {
     renderer2.setPixelRatio(1);
     renderer2.shadowMap.enabled = true;
     renderer2.domElement.className = 'overflow-hidden absolute ba';
-    renderer2.setSize(256, 256);
+    renderer2.setSize(fp_image_size, fp_image_size);
     container.appendChild(renderer2.domElement);
 
     renderer = new THREE.WebGLRenderer({antialias: true});
@@ -214,13 +211,13 @@ function render() {
 
     renderer2.render(scene, camera2);
 
-    if (socket.readyState == 1) {
+    if (socket && socket.readyState == 1) {
         // var gl = renderer2.getContext();
         // var pixels = new Uint8Array(256 * 256 * 4);
         // gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
         // socket.send(pixels);
         let imgData = renderer2.domElement.toDataURL('image/png');
-        console.log("imgData", imgData)
+        // console.log("imgData", imgData)
         socket.send(imgData);
     }
 }
@@ -292,3 +289,65 @@ window.addEventListener('keydown', function(event) {
         target_rotation = q;
     }
 });
+
+
+function connect() {
+    socket = new WebSocket("ws://localhost:8000/websocket");
+
+    socket.addEventListener("message", (event) => {
+        console.log(event.data,  JSON.parse(event.data));
+        let e = JSON.parse(event.data);
+        let p = new THREE.Vector3();
+        let angle = 0;
+        let update_position = false;
+        let update_rotation = false;
+
+        if (e.left) {
+            angle = 90;
+            update_rotation = true;
+        }
+        if (e.right) {
+            angle = -90;
+            update_rotation = true;
+        }
+        if (e.up) {
+            p.set(0, 0, 0.01);
+            update_position = true;
+        }
+        if (e.down) {
+            p.set(0, 0, -0.01);
+            update_position = true;
+        }
+
+        if (!e.up && !e.down) {
+            target_direction.set(0, 0, 0);
+        }
+        if (!e.left && !e.right) {
+            let R = robot.base.r.rotation();
+            target_rotation.set(R.x, R.y, R.z, R.w);
+        }
+
+        if (update_position) {
+            target_direction = p;
+        }
+
+        if (update_rotation) {
+            angle = THREE.MathUtils.degToRad(angle);
+            let q = new THREE.Quaternion();
+            q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+            q.multiply(robot.base.m.quaternion);
+            target_rotation = q;
+        }
+    });
+    socket.addEventListener("close", (event) => {
+        console.log(event);
+        setTimeout(function() {
+            connect();
+        }, 1000);
+    });
+    socket.addEventListener("close", (event) => {
+        console.log(event);
+        socket.close();
+    });
+}
+connect();
