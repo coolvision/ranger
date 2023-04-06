@@ -23,9 +23,17 @@ let target_direction = new THREE.Vector3();
 let target_rotation = new THREE.Quaternion();
 
 let socket;
+let motion_task = {
+	done: true,
+	type: "",
+    translation: 0,
+    rotation: 0
+};
 
 await init();
 async function init() {
+
+    console.log("motion_task", motion_task)
 
     container = document.querySelector('body');
 
@@ -45,21 +53,13 @@ async function init() {
     container.appendChild(renderer.domElement);
 
     window.addEventListener('resize', function() {
-
         let w = window.visualViewport.width;
         let h = window.visualViewport.height;
-
-        // console.log("resize", w, h, window.innerWidth, window.innerHeight);
-
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         renderer.setSize(w, h);
         render();
     });
-
-
-    // let canvas = document.querySelector("canvas");
-    // canvas.className = 'overflow-hidden absolute ba';
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
@@ -201,10 +201,30 @@ function render() {
     });
     robot.updateGripperState();
 
-    robot.setPlatformTranslation(target_direction);
+
+    if (!motion_task.done && motion_task.type == "translation") {
+        let p = new THREE.Vector3(0, 0, motion_task.translation);
+        robot.setPlatformTranslation(p);
+        motion_task.done = true;
+    } else {
+        robot.setPlatformTranslation(target_direction);
+    }
+
     world.step(eventQueue);
 
-    robot.setPlatformRotation(target_rotation);
+    if (!motion_task.done && motion_task.type == "rotation") {
+        let angle = THREE.MathUtils.degToRad(motion_task.angle);
+        let q = new THREE.Quaternion();
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+        q.multiply(robot.base.m.quaternion);
+        target_rotation = q;
+        // robot.setPlatformRotation(q);
+        motion_task.done = true;
+        robot.setPlatformRotation(target_rotation);
+    } else {
+        robot.setPlatformRotation(target_rotation);
+    }
+
     robot.setGripperRotation(pointer_target);
 
     renderer.render(scene, camera);
@@ -295,7 +315,7 @@ function connect() {
     socket = new WebSocket("ws://localhost:8000/websocket");
 
     socket.addEventListener("message", (event) => {
-        console.log(event.data,  JSON.parse(event.data));
+        // console.log(event.data,  JSON.parse(event.data));
         let e = JSON.parse(event.data);
         let p = new THREE.Vector3();
         let angle = 0;
@@ -303,41 +323,26 @@ function connect() {
         let update_rotation = false;
 
         if (e.left) {
-            angle = 90;
-            update_rotation = true;
+            motion_task.done = false;
+            motion_task.type = "rotation";
+            motion_task.angle = 1;
         }
         if (e.right) {
-            angle = -90;
-            update_rotation = true;
+            motion_task.done = false;
+            motion_task.type = "rotation";
+            motion_task.angle = -1;
         }
         if (e.up) {
-            p.set(0, 0, 0.01);
-            update_position = true;
+            motion_task.done = false;
+            motion_task.type = "translation";
+            motion_task.translation = 0.01;
         }
         if (e.down) {
-            p.set(0, 0, -0.01);
-            update_position = true;
+            motion_task.done = false;
+            motion_task.type = "translation";
+            motion_task.translation = -0.01;
         }
 
-        if (!e.up && !e.down) {
-            target_direction.set(0, 0, 0);
-        }
-        if (!e.left && !e.right) {
-            let R = robot.base.r.rotation();
-            target_rotation.set(R.x, R.y, R.z, R.w);
-        }
-
-        if (update_position) {
-            target_direction = p;
-        }
-
-        if (update_rotation) {
-            angle = THREE.MathUtils.degToRad(angle);
-            let q = new THREE.Quaternion();
-            q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-            q.multiply(robot.base.m.quaternion);
-            target_rotation = q;
-        }
     });
     socket.addEventListener("close", (event) => {
         console.log(event);
