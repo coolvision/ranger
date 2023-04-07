@@ -195,25 +195,18 @@ function render() {
 
     robot.updateModels();
 
-    robot.resetGripperSensors();
-    eventQueue.drainContactForceEvents(event => {
-        let d = event.maxForceDirection();
-        let dv = new THREE.Vector3(d.x, d.y, d.z);
-        let c1 = world.getCollider(event.collider1());
-        let c2 = world.getCollider(event.collider2());
-        c1.touch = "on";
-        c2.touch = "on";
-    });
-    robot.updateGripperState();
+    // robot.resetGripperSensors();
+    // eventQueue.drainContactForceEvents(event => {
+    //     let d = event.maxForceDirection();
+    //     let dv = new THREE.Vector3(d.x, d.y, d.z);
+    //     let c1 = world.getCollider(event.collider1());
+    //     let c2 = world.getCollider(event.collider2());
+    //     c1.touch = "on";
+    //     c2.touch = "on";
+    // });
+    // robot.updateGripperState();
 
-
-    // if (!motion_task.done && motion_task.type == "translation") {
-    //     let p = new THREE.Vector3(0, 0, motion_task.translation);
-    //     robot.setPlatformTranslation(p);
-    //     motion_task.done = true;
-    // } else {
-        robot.setPlatformTranslation(target_direction);
-    // }
+    robot.setPlatformTranslation(target_direction);
 
     world.step(eventQueue);
 
@@ -223,19 +216,14 @@ function render() {
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
         q.multiply(robot.base.m.quaternion);
         robot.setPlatformRotation(q);
+		target_rotation.copy(q);
+
 		motion_task.done = true;
-		// robot.base.m.quaternion.copy(q);
-		// robot.base.m.updateWorldMatrix(true, true);
-		// robot.setGripperTranslation(pointer_target);
-		// robot.setGripperRotation(pointer_target);
-		// robot.updateGripperState();
-		// target_rotation = q;
-        // robot.setPlatformRotation(target_rotation);
-		// angle = THREE.MathUtils.degToRad(angle);
-		// let q = new THREE.Quaternion();
-		// q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-		// q.multiply(robot.base.m.quaternion);
-		// target_rotation = q;
+
+		
+
+		robot.base.m.quaternion.copy(q);
+		robot.base.m.updateWorldMatrix(true, true);
     }
 
     robot.setGripperRotation(pointer_target);
@@ -247,7 +235,9 @@ function render() {
 
     renderer.render(scene, camera);
 
+    scene.remove(transform_ctrl);
     renderer2.render(scene, camera2);
+	scene.add(transform_ctrl);
 
     if (socket && socket.readyState == 1) {
         // var gl = renderer2.getContext();
