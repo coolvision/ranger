@@ -30,6 +30,10 @@ let motion_task = {
     rotation: 0
 };
 
+
+let render_i = 0;
+
+
 await init();
 async function init() {
 
@@ -169,15 +173,16 @@ async function init() {
     // Controls
     controls = new OrbitControls(camera, renderer.domElement);
     controls.damping = 0.2;
-    controls.enableZoom = false;
+    // controls.enableZoom = false;
     controls.addEventListener('change', render);
 
     renderer.setAnimationLoop(render);
 
 }
 
-
 function render() {
+
+    render_i++;
 
     for (let i = 0; i < boxes.length; i++) {
         let p = boxes[i].r.translation();
@@ -202,30 +207,38 @@ function render() {
     robot.updateGripperState();
 
 
-    if (!motion_task.done && motion_task.type == "translation") {
-        let p = new THREE.Vector3(0, 0, motion_task.translation);
-        robot.setPlatformTranslation(p);
-        motion_task.done = true;
-    } else {
+    // if (!motion_task.done && motion_task.type == "translation") {
+    //     let p = new THREE.Vector3(0, 0, motion_task.translation);
+    //     robot.setPlatformTranslation(p);
+    //     motion_task.done = true;
+    // } else {
         robot.setPlatformTranslation(target_direction);
-    }
+    // }
 
     world.step(eventQueue);
 
-    if (!motion_task.done && motion_task.type == "rotation") {
-        let angle = THREE.MathUtils.degToRad(motion_task.angle);
-        let q = new THREE.Quaternion();
-        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-        q.multiply(robot.base.m.quaternion);
-        target_rotation = q;
-        // robot.setPlatformRotation(q);
-        motion_task.done = true;
+    // if (!motion_task.done && motion_task.type == "rotation") {
+    //     let angle = THREE.MathUtils.degToRad(motion_task.angle);
+    //     let q = new THREE.Quaternion();
+    //     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+    //     q.multiply(robot.base.m.quaternion);
+    //     target_rotation = q;
+    //     // robot.setPlatformRotation(q);
+    //     motion_task.done = true;
+    //     robot.setPlatformRotation(target_rotation);
+    // } else {
+
         robot.setPlatformRotation(target_rotation);
-    } else {
-        robot.setPlatformRotation(target_rotation);
-    }
+    // }
 
     robot.setGripperRotation(pointer_target);
+
+
+
+    console.log("target_rotation", render_i, target_rotation);
+    console.log("robot", robot.base.r.rotation(), robot.base.m.quaternion);
+    console.log("pointer", robot.g3.r.translation(), pointer_target.position);
+
 
     renderer.render(scene, camera);
 
@@ -273,8 +286,8 @@ window.addEventListener('keydown', function(event) {
             transform_ctrl.setMode('rotate');
             break;
         case "KeyZ":
-            controls.enableZoom = !controls.enableZoom;
-            // world.step(eventQueue);
+            // controls.enableZoom = !controls.enableZoom;
+            world.step(eventQueue);
             break;
         case "KeyG":
             robot.gripper_open = !robot.gripper_open;
@@ -288,11 +301,11 @@ window.addEventListener('keydown', function(event) {
             update_position = true;
             break;
         case "KeyA":
-            angle = 90;
+            angle = 1;
             update_rotation = true;
             break;
         case "KeyD":
-            angle = -90;
+            angle = -1;
             update_rotation = true;
             break;
     }
