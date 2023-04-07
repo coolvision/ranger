@@ -163,13 +163,8 @@ export class Robot {
 
     setPlatformRotation(target_rotation) {
         this.base.r.recomputeMassPropertiesFromColliders();
-        // let R = this.base.r.rotation();
-        // let q = new THREE.Quaternion();
-        // q.set(R.x, R.y, R.z, R.w);
-        // q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
         let q = target_rotation;
         this.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-
     }
 
     setPlatformRotationTowards(target_rotation) {
@@ -180,27 +175,6 @@ export class Robot {
         q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
         this.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
-
-
-    // movePlatform(translation) {
-    //     let d = new THREE.Vector3(0, 0, translation);
-    //     d.applyQuaternion(this.base.m.quaternion);
-    //     this.platform.setSlideEnabled(true);
-    //     this.platform.computeColliderMovement(this.base.c, {x: d.x, y: d.y, z: d.z},
-    //             0, -1, function(c) {return !c.is_robot;});
-    //     let pt = this.platform.computedMovement();
-    //     let T = this.base.r.translation();
-    //     this.base.r.setNextKinematicTranslation({x: pt.x+T.x, y: pt.y+T.y, z: pt.z+T.z}, true);
-    // }
-
-    // rotatePlatform(angle) {
-    //     this.base.r.recomputeMassPropertiesFromColliders();
-    //     let R = this.base.r.rotation();
-    //     let q = new THREE.Quaternion();
-    //     q.set(R.x, R.y, R.z, R.w);
-    //     q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
-    //     this.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-    // }
 
     setGripperTranslation(pointer_target) {
         let p = new THREE.Vector3();

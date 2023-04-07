@@ -217,23 +217,28 @@ function render() {
 
     world.step(eventQueue);
 
-    // if (!motion_task.done && motion_task.type == "rotation") {
-    //     let angle = THREE.MathUtils.degToRad(motion_task.angle);
-    //     let q = new THREE.Quaternion();
-    //     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-    //     q.multiply(robot.base.m.quaternion);
-    //     target_rotation = q;
-    //     // robot.setPlatformRotation(q);
-    //     motion_task.done = true;
-    //     robot.setPlatformRotation(target_rotation);
-    // } else {
-
-        robot.setPlatformRotation(target_rotation);
-    // }
+    if (!motion_task.done && motion_task.type == "rotation") {
+        let angle = THREE.MathUtils.degToRad(motion_task.angle);
+        let q = new THREE.Quaternion();
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+        q.multiply(robot.base.m.quaternion);
+        robot.setPlatformRotation(q);
+		motion_task.done = true;
+		// robot.base.m.quaternion.copy(q);
+		// robot.base.m.updateWorldMatrix(true, true);
+		// robot.setGripperTranslation(pointer_target);
+		// robot.setGripperRotation(pointer_target);
+		// robot.updateGripperState();
+		// target_rotation = q;
+        // robot.setPlatformRotation(target_rotation);
+		// angle = THREE.MathUtils.degToRad(angle);
+		// let q = new THREE.Quaternion();
+		// q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+		// q.multiply(robot.base.m.quaternion);
+		// target_rotation = q;
+    }
 
     robot.setGripperRotation(pointer_target);
-
-
 
     console.log("target_rotation", render_i, target_rotation);
     console.log("robot", robot.base.r.rotation(), robot.base.m.quaternion);
@@ -301,11 +306,11 @@ window.addEventListener('keydown', function(event) {
             update_position = true;
             break;
         case "KeyA":
-            angle = 1;
+            angle = 5;
             update_rotation = true;
             break;
         case "KeyD":
-            angle = -1;
+            angle = -5;
             update_rotation = true;
             break;
     }
@@ -315,11 +320,15 @@ window.addEventListener('keydown', function(event) {
     }
 
     if (update_rotation) {
-        angle = THREE.MathUtils.degToRad(angle);
-        let q = new THREE.Quaternion();
-        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-        q.multiply(robot.base.m.quaternion);
-        target_rotation = q;
+        // angle = THREE.MathUtils.degToRad(angle);
+        // let q = new THREE.Quaternion();
+        // q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+        // q.multiply(robot.base.m.quaternion);
+        // target_rotation = q;
+
+		motion_task.done = false;
+		motion_task.type = "rotation";
+		motion_task.angle = angle;
     }
 });
 
