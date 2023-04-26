@@ -6,6 +6,8 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { Robot } from './robot.js'
 import * as utils from './rapier_utils.js'
 
+import URDFLoader from 'urdf-loader';
+
 let container;
 let camera, scene, renderer, controls;
 let camera2, renderer2;
@@ -26,13 +28,9 @@ let socket;
 let motion_task = {
 	done: true,
 	type: "",
-    translation: 0,
-    rotation: 0
+    v: 0,
 };
-
-
 let render_i = 0;
-
 
 await init();
 async function init() {
@@ -85,32 +83,60 @@ async function init() {
     ground_collider = world.createCollider(groundColliderDesc);
     ground_collider.ignore_controller = true;
 
-    robot = new Robot(world, scene);
 
-    robot.base.r.setNextKinematicTranslation({x: 0, y: robot.base.h/2, z: 0}, true);
-    world.step(eventQueue);
-    robot.base.r.recomputeMassPropertiesFromColliders();
-    robot.base.m.add(pointer_target);
+	const manager = new THREE.LoadingManager();
+	const loader = new URDFLoader(manager);
+	loader.packages = {
+	    'a1_description' : './a1_description'            // The equivalent of a (list of) ROS package(s):// directory
+	};
+	loader.load(
+	  'a1_description/urdf/a1.urdf',                    // The path to the URDF within the package OR absolute
+	  robot => {
+	    // The robot is loaded!
+		console.log("add robot", robot);
+		robot.rotateX(- Math.PI / 2);
+	    scene.add(robot);
 
 
-    camera2 = new THREE.PerspectiveCamera(70,1, 0.1, 100);
-    robot.base.m.add(camera2);
-    camera2.position.set(0, 1.5, 0);
-    camera2.rotateY(Math.PI);
-    camera2.rotateX(-Math.PI / 4);
+
+		robot.traverse((c) => {
+			// console.log("traverse", c);
+			if (c.type == 'Mesh') {
+				console.log("traverse", 'Mesh', c);
+			}
+	    });
+
+	  }
+	);
 
 
-    transform_ctrl = new TransformControls(camera, renderer.domElement);
-    transform_ctrl.addEventListener('change', render);
-    transform_ctrl.addEventListener('dragging-changed', function (event) {
-        controls.enabled = ! event.value;
-    });
-    transform_ctrl.size = 0.75
-    transform_ctrl.setSpace("local");
-    transform_ctrl.attach(pointer_target);
 
-    scene.add(transform_ctrl);
-
+    // robot = new Robot(world, scene);
+	//
+    // robot.base.r.setNextKinematicTranslation({x: 0, y: robot.base.h/2, z: 0}, true);
+    // world.step(eventQueue);
+    // robot.base.r.recomputeMassPropertiesFromColliders();
+    // robot.base.m.add(pointer_target);
+	//
+	//
+    // camera2 = new THREE.PerspectiveCamera(70,1, 0.1, 100);
+    // robot.base.m.add(camera2);
+    // camera2.position.set(0, 1.5, 0);
+    // camera2.rotateY(Math.PI);
+    // camera2.rotateX(-Math.PI / 4);
+	//
+	//
+    // transform_ctrl = new TransformControls(camera, renderer.domElement);
+    // transform_ctrl.addEventListener('change', render);
+    // transform_ctrl.addEventListener('dragging-changed', function (event) {
+    //     controls.enabled = ! event.value;
+    // });
+    // transform_ctrl.size = 0.75
+    // transform_ctrl.setSpace("local");
+    // transform_ctrl.attach(pointer_target);
+	//
+    // scene.add(transform_ctrl);
+	//
     let size = 0.5
     let p = new THREE.Vector3(0, 1, 0.75);
     let c = new THREE.Color();
@@ -184,17 +210,43 @@ function render() {
 
     render_i++;
 
-    for (let i = 0; i < boxes.length; i++) {
-        let p = boxes[i].r.translation();
-        let q = boxes[i].r.rotation();
-        boxes[i].m.position.set(p.x, p.y, p.z);
-        boxes[i].m.quaternion.set(q.x, q.y, q.z, q.w);
-    }
-
-    robot.setGripperTranslation(pointer_target);
-
-    robot.updateModels();
-
+	// if (!motion_task.done && motion_task.type == "rotation") {
+    //     let angle = THREE.MathUtils.degToRad(motion_task.v);
+    //     let q = new THREE.Quaternion();
+    //     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+    //     q.multiply(robot.base.m.quaternion);
+    //     robot.setPlatformRotation(q);
+	// 	target_rotation.copy(q);
+	// 	motion_task.done = true;
+	// 	robot.base.m.quaternion.copy(q);
+	// 	robot.base.m.updateWorldMatrix(true, true);
+    // }
+	//
+	//
+	// if (!motion_task.done && motion_task.type == "g_rotation") {
+	// 	pointer_target.rotateY(motion_task.v[0]);
+	// 	pointer_target.rotateX(motion_task.v[1]);
+	// 	pointer_target.rotateZ(motion_task.v[2]);
+	// 	motion_task.done = true;
+	// }
+    // robot.setGripperRotation(pointer_target);
+	//
+	// if (!motion_task.done && motion_task.type == "translation") {
+	// 	let p = new THREE.Vector3(0, 0, motion_task.v);
+	// 	let r = robot.setPlatformTranslation(p);
+	// 	motion_task.done = true;
+	// 	robot.base.m.position.copy(r);
+	// 	robot.base.m.updateWorldMatrix(true, true);
+	// }
+	//
+	// if (!motion_task.done && motion_task.type == "g_translation") {
+	// 	pointer_target.position.x += motion_task.v[0];
+	// 	pointer_target.position.y += motion_task.v[1];
+	// 	pointer_target.position.z += motion_task.v[2];
+	// 	motion_task.done = true;
+	// }
+	// robot.setGripperTranslation(pointer_target);
+	//
     // robot.resetGripperSensors();
     // eventQueue.drainContactForceEvents(event => {
     //     let d = event.maxForceDirection();
@@ -206,47 +258,29 @@ function render() {
     // });
     // robot.updateGripperState();
 
-    robot.setPlatformTranslation(target_direction);
-
     world.step(eventQueue);
 
-    if (!motion_task.done && motion_task.type == "rotation") {
-        let angle = THREE.MathUtils.degToRad(motion_task.angle);
-        let q = new THREE.Quaternion();
-        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-        q.multiply(robot.base.m.quaternion);
-        robot.setPlatformRotation(q);
-		target_rotation.copy(q);
+	// robot.updateModels();
 
-		motion_task.done = true;
 
-		
-
-		robot.base.m.quaternion.copy(q);
-		robot.base.m.updateWorldMatrix(true, true);
+	for (let i = 0; i < boxes.length; i++) {
+        let p = boxes[i].r.translation();
+        let q = boxes[i].r.rotation();
+        boxes[i].m.position.set(p.x, p.y, p.z);
+        boxes[i].m.quaternion.set(q.x, q.y, q.z, q.w);
     }
 
-    robot.setGripperRotation(pointer_target);
-
-    console.log("target_rotation", render_i, target_rotation);
-    console.log("robot", robot.base.r.rotation(), robot.base.m.quaternion);
-    console.log("pointer", robot.g3.r.translation(), pointer_target.position);
-
+    // console.log("target_rotation", render_i, target_rotation);
+    // console.log("robot", robot.base.r.rotation(), robot.base.m.quaternion);
+    // console.log("pointer", robot.g3.r.translation(), pointer_target.position);
 
     renderer.render(scene, camera);
-
-    scene.remove(transform_ctrl);
-    renderer2.render(scene, camera2);
-	scene.add(transform_ctrl);
-
+    // scene.remove(transform_ctrl);
+    // renderer2.render(scene, camera2);
+	// scene.add(transform_ctrl);
     if (socket && socket.readyState == 1) {
-        // var gl = renderer2.getContext();
-        // var pixels = new Uint8Array(256 * 256 * 4);
-        // gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-        // socket.send(pixels);
         let imgData = renderer2.domElement.toDataURL('image/png');
-        // console.log("imgData", imgData)
-        socket.send(imgData);
+        // socket.send(imgData);
     }
 }
 
@@ -262,8 +296,6 @@ window.addEventListener('keyup', function(event) {
 
 window.addEventListener('keydown', function(event) {
 
-    let p = new THREE.Vector3();
-    let angle = 0;
     let update_position = false;
     let update_rotation = false;
 
@@ -288,72 +320,95 @@ window.addEventListener('keydown', function(event) {
             robot.gripper_open = !robot.gripper_open;
             break;
         case "KeyW":
-            p.set(0, 0, 0.01);
+			motion_task.translation = 0.1;
             update_position = true;
             break;
         case "KeyS":
-            p.set(0, 0, -0.01);
+			motion_task.translation = -0.1;
             update_position = true;
             break;
         case "KeyA":
-            angle = 5;
+            motion_task.angle = 5;
             update_rotation = true;
             break;
         case "KeyD":
-            angle = -5;
+            motion_task.angle = -5;
             update_rotation = true;
             break;
     }
 
     if (update_position) {
-        target_direction = p;
+		motion_task.done = false;
+		motion_task.type = "translation";
     }
 
     if (update_rotation) {
-        // angle = THREE.MathUtils.degToRad(angle);
-        // let q = new THREE.Quaternion();
-        // q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-        // q.multiply(robot.base.m.quaternion);
-        // target_rotation = q;
-
 		motion_task.done = false;
 		motion_task.type = "rotation";
-		motion_task.angle = angle;
     }
 });
 
+function task(type, v) {
+	motion_task.done = false;
+	motion_task.type = type;
+	motion_task.v = v;
+}
 
 function connect() {
     socket = new WebSocket("ws://localhost:8000/websocket");
 
     socket.addEventListener("message", (event) => {
-        // console.log(event.data,  JSON.parse(event.data));
+        console.log(event.data,  JSON.parse(event.data));
         let e = JSON.parse(event.data);
-        let p = new THREE.Vector3();
-        let angle = 0;
-        let update_position = false;
-        let update_rotation = false;
+        // let p = new THREE.Vector3();
+        // let angle = 0;
+        // let update_position = false;
+        // let update_rotation = false;
 
-        if (e.left) {
-            motion_task.done = false;
-            motion_task.type = "rotation";
-            motion_task.angle = 1;
-        }
-        if (e.right) {
-            motion_task.done = false;
-            motion_task.type = "rotation";
-            motion_task.angle = -1;
-        }
-        if (e.up) {
-            motion_task.done = false;
-            motion_task.type = "translation";
-            motion_task.translation = 0.01;
-        }
-        if (e.down) {
-            motion_task.done = false;
-            motion_task.type = "translation";
-            motion_task.translation = -0.01;
-        }
+        if (e.left) task("rotation", 1);
+        if (e.right) task("rotation", -1);
+        if (e.up) task("translation", 0.01);
+        if (e.down) task("translation", -0.01);
+
+		let t = 0.01;
+		if (e.g_left) task("g_translation", [t, 0, 0]);
+        if (e.g_right) task("g_translation", [-t, 0, 0]);
+        if (e.g_up) task("g_translation", [0, t, 0]);
+        if (e.g_down) task("g_translation", [0, -t, 0]);
+		if (e.g_fw) task("g_translation", [0, 0, t]);
+        if (e.g_bw) task("g_translation", [0, 0, -t]);
+
+    	let a = THREE.MathUtils.degToRad(5);
+		if (e.g_yaw1) task("g_rotation", [a, 0, 0]);
+        if (e.g_yaw2) task("g_rotation", [-a, 0, 0]);
+        if (e.g_pitch1) task("g_rotation", [0, -a, 0]);
+        if (e.g_pitch2) task("g_rotation", [0, a, 0]);
+		if (e.g_roll1) task("g_rotation", [0, 0, -a]);
+        if (e.g_roll2) task("g_rotation", [0, 0, a]);
+
+		if (e.gripper_toggle) robot.gripper_open = !robot.gripper_open;
+
+
+		// if (e.g_left) {
+        //     motion_task.done = false;
+        //     motion_task.type = "g_translation";
+        //     motion_task.angle = 1;
+        // }
+        // if (e.g_right) {
+        //     motion_task.done = false;
+        //     motion_task.type = "g_translation";
+        //     motion_task.angle = -1;
+        // }
+        // if (e.g_up) {
+        //     motion_task.done = false;
+        //     motion_task.type = "g_translation";
+        //     motion_task.translation = 0.01;
+        // }
+        // if (e.g_down) {
+        //     motion_task.done = false;
+        //     motion_task.type = "g_translation";
+        //     motion_task.translation = -0.01;
+        // }
 
     });
     socket.addEventListener("close", (event) => {
@@ -367,4 +422,4 @@ function connect() {
         socket.close();
     });
 }
-connect();
+// connect();

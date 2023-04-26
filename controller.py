@@ -67,6 +67,33 @@ def main():
     run = True
     while run:
         clock.tick(60)
+
+        keys = pygame.key.get_pressed()
+        send = {
+            "left": keys[pygame.K_a],
+            "right": keys[pygame.K_d],
+            "up": keys[pygame.K_w],
+            "down": keys[pygame.K_s],
+
+            "g_left": keys[pygame.K_LEFT],
+            "g_right": keys[pygame.K_RIGHT],
+            "g_fw": keys[pygame.K_UP],
+            "g_bw": keys[pygame.K_DOWN],
+            "g_up": keys[pygame.K_COMMA],
+            "g_down": keys[pygame.K_PERIOD],
+
+            "g_yaw1": keys[pygame.K_y],
+            "g_yaw2": keys[pygame.K_u],
+
+            "g_pitch1": keys[pygame.K_p],
+            "g_pitch2": keys[pygame.K_LEFTBRACKET],
+
+            "g_roll1": keys[pygame.K_r],
+            "g_roll2": keys[pygame.K_t],
+
+            "gripper_toggle": False,
+        }
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -74,27 +101,11 @@ def main():
                 print(pygame.key.name(event.key))
                 if event.key == pygame.K_ESCAPE:
                     run = False
+                if event.key == pygame.K_g:
+                    send["gripper_toggle"] = True
 
-        keys = pygame.key.get_pressed()
-
-        send = {
-            "left": keys[pygame.K_LEFT],
-            "right": keys[pygame.K_RIGHT],
-            "up": keys[pygame.K_UP],
-            "down": keys[pygame.K_DOWN],
-        }
         # print("send", send)
         WebSocketHandler.send_message(send)
-
-        # rect.x += (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * vel
-        # rect.y += (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * vel
-        #
-        # rect.centerx = rect.centerx % window.get_width()
-        # rect.centery = rect.centery % window.get_height()
-
-        # window.fill(0)
-        # pygame.draw.rect(window, (255, 0, 0), rect)
-        # pygame.display.flip()
 
     pygame.quit()
     exit()

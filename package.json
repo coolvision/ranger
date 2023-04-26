@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@dimforge/rapier3d": "^0.11.1",
-    "three": "^0.149.0"
+    "three": "^0.149.0",
+    "urdf-loader": "^0.10.5"
   }
 }

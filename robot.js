@@ -11,6 +11,7 @@ export class Robot {
         this.joints = [];
 
         this.gripper_s = 0.001;
+        // this.gripper_s = 0.001;
         this.gripper_open_1 = -0.05;
         this.gripper_closed_1 = -0.005;
         this.gripper_open_2 = 0.05;
@@ -22,6 +23,7 @@ export class Robot {
 
         this.platform = world.createCharacterController(0.01);
         this.gripper = world.createCharacterController(0.01);
+        // this.platform.enableAutostep(0.1, 0.1, true);
 
         let arm_w = 0.05;
         this.base = utils.addBody("position", "cuboid", world, scene, 1, 100, -1, r_d, 0.4, 0.15, 0.4);
@@ -35,25 +37,25 @@ export class Robot {
         this.g3 = utils.addBody("position", "cuboid", world, scene, 0, 0, -1, r_d, 0.16, arm_w, 0.02, 0.5, 0.5, 0.5);
         this.g3.m.position.set(0.5, 0.5, 0.5);
 
-        // this.g1 = utils.addBody("position", "cuboid", world, this.g3.m, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
-        // this.g2 = utils.addBody("position", "cuboid", world, this.g3.m, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
-        // this.g1.m.position.set(this.gripper_open_1, 0, this.g1.d/2+this.g3.d/2);
-        // this.g2.m.position.set(this.gripper_open_2, 0, this.g2.d/2+this.g3.d/2);
-        //
-        // this.g1_pad = utils.addBody("position", "cuboid", world, this.g1.m, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
-        // this.g2_pad = utils.addBody("position", "cuboid", world, this.g2.m, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
-        // this.g1_pad.m.position.set(0.01/2+0.001/2, 0, 0);
-        // this.g2_pad.m.position.set(-0.01/2-0.001/2, 0, 0);
-
-        this.g1 = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
-        this.g2 = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
+        this.g1 = utils.addBody("position", "cuboid", world, this.g3.m, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
+        this.g2 = utils.addBody("position", "cuboid", world, this.g3.m, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
         this.g1.m.position.set(this.gripper_open_1, 0, this.g1.d/2+this.g3.d/2);
         this.g2.m.position.set(this.gripper_open_2, 0, this.g2.d/2+this.g3.d/2);
 
-        this.g1_pad = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
-        this.g2_pad = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
+        this.g1_pad = utils.addBody("position", "cuboid", world, this.g1.m, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
+        this.g2_pad = utils.addBody("position", "cuboid", world, this.g2.m, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
         this.g1_pad.m.position.set(0.01/2+0.001/2, 0, 0);
         this.g2_pad.m.position.set(-0.01/2-0.001/2, 0, 0);
+
+        // this.g1 = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
+        // this.g2 = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
+        // this.g1.m.position.set(this.gripper_open_1, 0, this.g1.d/2+this.g3.d/2);
+        // this.g2.m.position.set(this.gripper_open_2, 0, this.g2.d/2+this.g3.d/2);
+        //
+        // this.g1_pad = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
+        // this.g2_pad = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
+        // this.g1_pad.m.position.set(0.01/2+0.001/2, 0, 0);
+        // this.g2_pad.m.position.set(-0.01/2-0.001/2, 0, 0);
 
 
         this.parts.push(this.base, this.mast, this.indicator, this.arm_base, this.shoulder,
@@ -166,10 +168,12 @@ export class Robot {
         d.applyQuaternion(this.base.m.quaternion);
         this.platform.setSlideEnabled(true);
         this.platform.computeColliderMovement(this.base.c, {x: d.x, y: d.y, z: d.z},
-                0, -1, function(c) {return !c.is_robot;});
+                0, -1, function(c) {return !(c.is_robot || c.ignore_controller);});
         let pt = this.platform.computedMovement();
         let T = this.base.r.translation();
-        this.base.r.setNextKinematicTranslation({x: pt.x+T.x, y: pt.y+T.y, z: pt.z+T.z}, true);
+        let p = new THREE.Vector3(pt.x+T.x, pt.y+T.y, pt.z+T.z);
+        this.base.r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+        return p;
     }
 
     setPlatformRotation(target_rotation) {
@@ -178,14 +182,14 @@ export class Robot {
         this.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
 
-    setPlatformRotationTowards(target_rotation) {
-        this.base.r.recomputeMassPropertiesFromColliders();
-        let R = this.base.r.rotation();
-        let q = new THREE.Quaternion();
-        q.set(R.x, R.y, R.z, R.w);
-        q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
-        this.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-    }
+    // setPlatformRotationTowards(target_rotation) {
+    //     this.base.r.recomputeMassPropertiesFromColliders();
+    //     let R = this.base.r.rotation();
+    //     let q = new THREE.Quaternion();
+    //     q.set(R.x, R.y, R.z, R.w);
+    //     q.rotateTowards(target_rotation, THREE.MathUtils.degToRad(1));
+    //     this.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    // }
 
     setGripperTranslation(pointer_target) {
         let p = new THREE.Vector3();
