@@ -1,9 +1,9 @@
 
 import * as THREE from 'three';
-import RAPIER from './rapier3d-compat';
-import * as utils from './rapier_utils.js'
+import RAPIER from '/lib/rapier3d-compat.js';
+import * as utils from '/src/rapier_utils.js'
 
-export class Robot {
+export class S1 {
 
     constructor(world, scene) {
 
@@ -46,17 +46,6 @@ export class Robot {
         this.g2_pad = utils.addBody("position", "cuboid", world, this.g2.m, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
         this.g1_pad.m.position.set(0.01/2+0.001/2, 0, 0);
         this.g2_pad.m.position.set(-0.01/2-0.001/2, 0, 0);
-
-        // this.g1 = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
-        // this.g2 = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.01, 0.05, 0.1);
-        // this.g1.m.position.set(this.gripper_open_1, 0, this.g1.d/2+this.g3.d/2);
-        // this.g2.m.position.set(this.gripper_open_2, 0, this.g2.d/2+this.g3.d/2);
-        //
-        // this.g1_pad = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
-        // this.g2_pad = utils.addBody("position", "cuboid", world, scene, 0, 0, gripper_f, r_d, 0.001, 0.05, 0.1, 0, 0, 0, 0xffffff);
-        // this.g1_pad.m.position.set(0.01/2+0.001/2, 0, 0);
-        // this.g2_pad.m.position.set(-0.01/2-0.001/2, 0, 0);
-
 
         this.parts.push(this.base, this.mast, this.indicator, this.arm_base, this.shoulder,
             this.elbow, this.forearm, this.wrist, this.g3, this.g1, this.g2, this.g1_pad, this.g2_pad);
