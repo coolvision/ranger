@@ -153,6 +153,9 @@ export class S1 {
     }
 
     setPlatformTranslation(target_direction) {
+
+        console.log("setPlatformTranslation", target_direction.clone());
+
         let d = target_direction.clone();
         d.applyQuaternion(this.base.m.quaternion);
         this.platform.setSlideEnabled(true);
@@ -166,6 +169,9 @@ export class S1 {
     }
 
     setPlatformRotation(target_rotation) {
+
+        console.log("setPlatformRotation", target_rotation.clone());
+
         this.base.r.recomputeMassPropertiesFromColliders();
         let q = target_rotation;
         this.base.r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);

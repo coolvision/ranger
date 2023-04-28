@@ -173,6 +173,10 @@ function render() {
 
     render_i++;
 
+	if (!motion_task.done) {
+		console.log("motion_task", motion_task)
+	}
+
 	if (!motion_task.done && motion_task.type == "rotation") {
         let angle = THREE.MathUtils.degToRad(motion_task.v);
         let q = new THREE.Quaternion();
@@ -195,6 +199,7 @@ function render() {
 
 	if (!motion_task.done && motion_task.type == "translation") {
 		let p = new THREE.Vector3(0, 0, motion_task.v);
+		console.log("call setPlatformTranslation", p)
 		let r = robot.setPlatformTranslation(p);
 		motion_task.done = true;
 		robot.base.m.position.copy(r);
@@ -241,6 +246,8 @@ function render() {
         let imgData = renderer2.domElement.toDataURL('image/png');
         // socket.send(imgData);
     }
+
+	// console.log("motion_task after", motion_task)
 }
 
 window.addEventListener('keyup', function(event) {
@@ -281,32 +288,20 @@ window.addEventListener('keydown', function(event) {
             robot.gripper_open = !robot.gripper_open;
             break;
         case "KeyW":
-			motion_task.translation = 0.1;
-            update_position = true;
+			task("translation", 0.1);
             break;
         case "KeyS":
-			motion_task.translation = -0.1;
-            update_position = true;
+			task("translation", -0.1);
             break;
         case "KeyA":
-            motion_task.angle = 5;
-            update_rotation = true;
+     		task("rotation", 5);
             break;
         case "KeyD":
-            motion_task.angle = -5;
+            task("rotation", -5);
             update_rotation = true;
             break;
     }
 
-    if (update_position) {
-		motion_task.done = false;
-		motion_task.type = "translation";
-    }
-
-    if (update_rotation) {
-		motion_task.done = false;
-		motion_task.type = "rotation";
-    }
 });
 
 function task(type, v) {
