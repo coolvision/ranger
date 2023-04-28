@@ -32,19 +32,9 @@ let motion_task = {
 };
 let render_i = 0;
 
-await init();
-async function init() {
-
-    console.log("motion_task", motion_task)
+function scene_setup() {
 
     container = document.querySelector('body');
-
-    renderer2 = new THREE.WebGLRenderer({antialias: true});
-    renderer2.setPixelRatio(1);
-    renderer2.shadowMap.enabled = true;
-    renderer2.domElement.className = 'overflow-hidden absolute ba';
-    renderer2.setSize(fp_image_size, fp_image_size);
-    container.appendChild(renderer2.domElement);
 
     renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -70,7 +60,15 @@ async function init() {
     camera.position.set(0, 1.5, 2.2);
     scene.add(camera);
 
-    await RAPIER.init();
+}
+
+
+await init();
+async function init() {
+
+	scene_setup();
+
+	await RAPIER.init();
     let gravity = {x: 0.0, y: -9.81, z: 0.0};
     world = new RAPIER.World(gravity);
     eventQueue = new RAPIER.EventQueue(true);
@@ -83,32 +81,6 @@ async function init() {
     ground_collider = world.createCollider(groundColliderDesc);
     ground_collider.ignore_controller = true;
 
-
-	// const manager = new THREE.LoadingManager();
-	// const loader = new URDFLoader(manager);
-	// loader.packages = {
-	//     'a1_description' : './a1_description'            // The equivalent of a (list of) ROS package(s):// directory
-	// };
-	// loader.load(
-	//   'a1_description/urdf/a1.urdf',                    // The path to the URDF within the package OR absolute
-	//   robot => {
-	//     // The robot is loaded!
-	// 	console.log("add robot", robot);
-	// 	robot.rotateX(- Math.PI / 2);
-	//     scene.add(robot);
-	//
-	//
-	//
-	// 	robot.traverse((c) => {
-	// 		// console.log("traverse", c);
-	// 		if (c.type == 'Mesh') {
-	// 			console.log("traverse", 'Mesh', c);
-	// 		}
-	//     });
-	//
-	//   }
-	// );
-
     robot = new S1(world, scene);
 
     robot.base.r.setNextKinematicTranslation({x: 0, y: robot.base.h/2, z: 0}, true);
@@ -116,25 +88,16 @@ async function init() {
     robot.base.r.recomputeMassPropertiesFromColliders();
     robot.base.m.add(pointer_target);
 
+	transform_ctrl = new TransformControls(camera, renderer.domElement);
+	transform_ctrl.addEventListener('change', render);
+	transform_ctrl.addEventListener('dragging-changed', function (event) {
+     	controls.enabled = ! event.value;
+	});
+	transform_ctrl.size = 0.75
+	transform_ctrl.setSpace("local");
+	transform_ctrl.attach(pointer_target);
 
-    camera2 = new THREE.PerspectiveCamera(70,1, 0.1, 100);
-    robot.base.m.add(camera2);
-    camera2.position.set(0, 1.5, 0);
-    camera2.rotateY(Math.PI);
-    camera2.rotateX(-Math.PI / 4);
-
-
-    transform_ctrl = new TransformControls(camera, renderer.domElement);
-    transform_ctrl.addEventListener('change', render);
-    transform_ctrl.addEventListener('dragging-changed', function (event) {
-        controls.enabled = ! event.value;
-    });
-    transform_ctrl.size = 0.75
-    transform_ctrl.setSpace("local");
-    transform_ctrl.attach(pointer_target);
-
-    scene.add(transform_ctrl);
-
+	scene.add(transform_ctrl);
 
 
     let size = 0.5
@@ -201,7 +164,6 @@ async function init() {
     // Controls
     controls = new OrbitControls(camera, renderer.domElement);
     controls.damping = 0.2;
-    // controls.enableZoom = false;
     controls.addEventListener('change', render);
 
     renderer.setAnimationLoop(render);
@@ -222,7 +184,6 @@ function render() {
 		robot.base.m.quaternion.copy(q);
 		robot.base.m.updateWorldMatrix(true, true);
     }
-
 
 	if (!motion_task.done && motion_task.type == "g_rotation") {
 		pointer_target.rotateY(motion_task.v[0]);
@@ -276,9 +237,6 @@ function render() {
     // console.log("pointer", robot.g3.r.translation(), pointer_target.position);
 
     renderer.render(scene, camera);
-    // scene.remove(transform_ctrl);
-    // renderer2.render(scene, camera2);
-	// scene.add(transform_ctrl);
     if (socket && socket.readyState == 1) {
         let imgData = renderer2.domElement.toDataURL('image/png');
         // socket.send(imgData);
@@ -299,6 +257,8 @@ window.addEventListener('keydown', function(event) {
 
     let update_position = false;
     let update_rotation = false;
+
+	console.log("keydown", event.code)
 
     switch ( event.code ) {
         case "KeyN":
