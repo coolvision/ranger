@@ -2,6 +2,103 @@
 import * as THREE from 'three';
 import RAPIER from '../lib/rapier3d-compat';
 
+export function addLink(type, v, c, world, scene) {
+
+    let body_desc;
+    if (type == "position") {
+        body_desc = RAPIER.RigidBodyDesc.kinematicPositionBased();
+        //.setTranslation(x, y, z);
+    } else {
+        body_desc = RAPIER.RigidBodyDesc.dynamic();
+        //.setTranslation(x, y, z);
+    }
+
+    body_desc.setCanSleep(false);
+
+    let rigid_body = world.createRigidBody(body_desc);
+
+    // rigid_body.setAdditionalMass(10);
+    // rigid_body.setAdditionalMass(m);
+    // rigid_body.setGravityScale(g);
+    // rigid_body.setAngularDamping(d);
+
+    // let collider_desc =
+    //     RAPIER.ColliderDesc.convexMesh(c.geometry.attributes.position.array,
+    //                                    c.geometry.index.array);
+   let collider_desc =
+       RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
+    // let collider_desc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
+
+
+    console.log("collider_desc", c.geometry.attributes.position.array,
+                                   c.geometry.index.array, collider_desc);
+    // if (f > 0) {
+    //     collider_desc.setFriction(f)
+    //     collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
+    // }
+
+    // let cd = getColliderDesc(world, scene, c);
+    let collider = world.createCollider(collider_desc, rigid_body);
+
+    scene.add(v);
+
+    return {
+        r: rigid_body,
+        c: collider,
+        m: v,
+        t: type,
+    }
+}
+
+export function getLinkColliderDesc(world, scene, c) {
+
+
+
+    // let geometry = new THREE.BoxGeometry(width, height, depth);
+    // let mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: color}));
+    // scene.add(mesh);
+
+    return {
+        cd: collider_desc,
+        // m: mesh,
+        // i: mesh.geometry.parameters,
+        // w: width,
+        // h: height,
+        // d: depth
+    }
+}
+
+export function updateLinks(r) {
+
+    for (let i in r.links) {
+        // if (this.parts[i].c.attached) continue;
+
+        r.links[i].r.wakeUp();
+
+        let q = r.links[i].r.rotation();
+        let q1 = new THREE.Quaternion();
+        q1.set(q.x, q.y, q.z, q.w);
+
+        let p = r.links[i].r.translation();
+        let p1 = new THREE.Vector3();
+        p1.set(p.x, p.y, p.z);
+
+        let m_body = new THREE.Matrix4();
+        m_body.compose(p1, q1, new THREE.Vector3(1, 1, 1));
+
+        let m_parent = r.links[i].m.parent.matrixWorld.clone();
+        m_parent.invert();
+        m_parent.multiply(m_body);
+
+        r.links[i].m.position.set(0, 0, 0);
+        r.links[i].m.quaternion.set(0, 0, 0, 1);
+        r.links[i].m.scale.set(1, 1, 1);
+        r.links[i].m.applyMatrix4(m_parent);
+
+        r.links[i].m.updateWorldMatrix(true, true);
+    }
+}
+
 export function getColliderDesc(world, scene, f, width, height, depth, color=0x333333) {
 
     let collider_desc = RAPIER.ColliderDesc.cuboid(width/2, height/2, depth/2);
