@@ -19,8 +19,8 @@ export function addLink(type, v, c, world, scene) {
 
     // rigid_body.setAdditionalMass(10);
     // rigid_body.setAdditionalMass(m);
-    // rigid_body.setGravityScale(g);
-    // rigid_body.setAngularDamping(d);
+    // rigid_body.setGravityScale(1);
+    rigid_body.setAngularDamping(100);
 
     // let collider_desc =
     //     RAPIER.ColliderDesc.convexMesh(c.geometry.attributes.position.array,
@@ -28,7 +28,6 @@ export function addLink(type, v, c, world, scene) {
    let collider_desc =
        RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
     // let collider_desc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
-
 
     console.log("collider_desc", c.geometry.attributes.position.array,
                                    c.geometry.index.array, collider_desc);
@@ -40,13 +39,15 @@ export function addLink(type, v, c, world, scene) {
     // let cd = getColliderDesc(world, scene, c);
     let collider = world.createCollider(collider_desc, rigid_body);
 
-    scene.add(v);
-
+    c.material = new THREE.MeshLambertMaterial({color: 0x333333});
+    scene.add(c);
+    // scene.add(v);
     return {
         r: rigid_body,
         c: collider,
-        m: v,
+        m: c,
         t: type,
+        scale: c.scale.clone()
     }
 }
 
@@ -92,7 +93,8 @@ export function updateLinks(r) {
 
         r.links[i].m.position.set(0, 0, 0);
         r.links[i].m.quaternion.set(0, 0, 0, 1);
-        r.links[i].m.scale.set(1, 1, 1);
+        r.links[i].m.scale.copy(r.links[i].scale);
+
         r.links[i].m.applyMatrix4(m_parent);
 
         r.links[i].m.updateWorldMatrix(true, true);

@@ -6,7 +6,8 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { S1 } from './robots/s1.js'
 import * as utils from './rapier_utils.js'
 
-import URDFLoader from 'urdf-loader';
+// import URDFLoader from 'urdf-loader';
+import URDFLoader from '../lib/URDFLoader.js';
 
 let container;
 let camera, scene, renderer, controls;
@@ -112,8 +113,8 @@ async function init() {
     world = new RAPIER.World(gravity);
     eventQueue = new RAPIER.EventQueue(true);
     let ip = world.integrationParameters;
-    ip.erp = 1.0;
-    ip.maxStabilizationIterations = 10;
+    // ip.erp = 1.0;
+    // ip.maxStabilizationIterations = 10;
 
     let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 1, 10.0);
     groundColliderDesc.setTranslation(0, -1, 0);
@@ -147,7 +148,7 @@ async function init() {
         let x = 0;
         for (let l in urdf.links) {
             // if (l == "base") continue;
-            if (l != "trunk") continue;
+            // if (l != "trunk") continue;
             console.log("link", l, urdf.links[l]);
 
             if (urdf.links[l].children.length >= 2) {
@@ -160,7 +161,7 @@ async function init() {
                     console.log("visual", v);
                     console.log("collider", c);
 
-                    a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene);
+                    a1_robot.links[l] = utils.addLink("dynamic", v, c, world, scene);
                 }
             }
         }
