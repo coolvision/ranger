@@ -121,6 +121,28 @@ async function init() {
     ground_collider = world.createCollider(groundColliderDesc);
     ground_collider.ignore_controller = true;
 
+
+    // robot = new S1(world, scene);
+    //
+    // robot.base.r.setNextKinematicTranslation({x: 0, y: robot.base.h/2, z: 0}, true);
+    // world.step(eventQueue);
+    // robot.base.r.recomputeMassPropertiesFromColliders();
+    // robot.base.m.add(pointer_target);
+    //
+	// transform_ctrl = new TransformControls(camera, renderer.domElement);
+	// transform_ctrl.addEventListener('change', render);
+	// transform_ctrl.addEventListener('dragging-changed', function (event) {
+    //  	controls.enabled = ! event.value;
+	// });
+	// transform_ctrl.size = 0.75
+	// transform_ctrl.setSpace("local");
+	// transform_ctrl.attach(pointer_target);
+    //
+	// scene.add(transform_ctrl);
+    //
+    // pointer_target.position.set(0.15, 0.455, 0.5);
+
+
     env_setup();
 
     const manager = new THREE.LoadingManager();
@@ -139,16 +161,11 @@ async function init() {
 
     manager.onLoad = () => {
 
-        // The robot is loaded!
-        // console.log("add robot", robot);
-        // robot.rotateX(- Math.PI / 2);
-        // scene.add(robot);
-
         // console.log("links", robot.links);
         let x = 0;
         for (let l in urdf.links) {
-            // if (l == "base") continue;
-            // if (l != "trunk") continue;
+            if (l == "base") continue;
+            if (l == "trunk") continue;
             console.log("link", l, urdf.links[l]);
 
             if (urdf.links[l].children.length >= 2) {
@@ -167,26 +184,6 @@ async function init() {
         }
 
         console.log("a1_robot", a1_robot)
-
-        // robot.rotation.x = Math.PI / 2;
-        // robot.traverse(c => {
-        //     c.castShadow = true;
-        // });
-        // for (let i = 1; i <= 6; i++) {
-        //
-        //     robot.joints[`HP${ i }`].setJointValue(MathUtils.degToRad(30));
-        //     robot.joints[`KP${ i }`].setJointValue(MathUtils.degToRad(120));
-        //     robot.joints[`AP${ i }`].setJointValue(MathUtils.degToRad(-60));
-        //
-        // }
-        // robot.updateMatrixWorld(true);
-        //
-        // const bb = new Box3();
-        // bb.setFromObject(robot);
-        //
-        // robot.position.y -= bb.min.y;
-        // scene.add(robot);
-
     };
 
 
@@ -217,7 +214,7 @@ function render() {
     //
     // if (!motion_task.done && motion_task.type == "translation") {
     //     let p = new THREE.Vector3(0, 0, motion_task.v);
-    //     console.log("call setPlatformTranslation", p)
+    //     // console.log("call setPlatformTranslation", p)
     //     let r = robot.setPlatformTranslation(p);
     //     motion_task.done = true;
     //     robot.base.m.position.copy(r);
@@ -242,9 +239,9 @@ function render() {
     //     c2.touch = "on";
     // });
     // robot.updateGripperState();
-    //
+
     world.step(eventQueue);
-    //
+
     // robot.updateModels();
 
     utils.updateLinks(a1_robot);
@@ -268,7 +265,7 @@ window.addEventListener('keydown', function(event) {
     let update_position = false;
     let update_rotation = false;
 
-    console.log("keydown", event.code)
+    // console.log("keydown", event.code)
 
     switch ( event.code ) {
         case "KeyN":
@@ -297,7 +294,7 @@ window.addEventListener('keydown', function(event) {
             task("translation", -0.1);
             break;
         case "KeyA":
-             task("rotation", 5);
+            task("rotation", 5);
             break;
         case "KeyD":
             task("rotation", -5);
@@ -306,13 +303,13 @@ window.addEventListener('keydown', function(event) {
     }
 
 });
-//
-// function task(type, v) {
-//     motion_task.done = false;
-//     motion_task.type = type;
-//     motion_task.v = v;
-// }
-//
+
+function task(type, v) {
+    motion_task.done = false;
+    motion_task.type = type;
+    motion_task.v = v;
+}
+
 // function connect() {
 //     socket = new WebSocket("ws://localhost:8000/websocket");
 //

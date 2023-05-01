@@ -154,7 +154,7 @@ export class S1 {
 
     setPlatformTranslation(target_direction) {
 
-        console.log("setPlatformTranslation", target_direction.clone());
+        // console.log("setPlatformTranslation", target_direction.clone());
 
         let d = target_direction.clone();
         d.applyQuaternion(this.base.m.quaternion);
@@ -170,7 +170,7 @@ export class S1 {
 
     setPlatformRotation(target_rotation) {
 
-        console.log("setPlatformRotation", target_rotation.clone());
+        // console.log("setPlatformRotation", target_rotation.clone());
 
         this.base.r.recomputeMassPropertiesFromColliders();
         let q = target_rotation;

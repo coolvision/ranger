@@ -14,23 +14,38 @@ export function addLink(type, v, c, world, scene) {
     }
 
     body_desc.setCanSleep(false);
+    body_desc.setCcdEnabled(true);
 
     let rigid_body = world.createRigidBody(body_desc);
 
-    // rigid_body.setAdditionalMass(10);
+    rigid_body.setAdditionalMass(100);
     // rigid_body.setAdditionalMass(m);
     // rigid_body.setGravityScale(1);
-    rigid_body.setAngularDamping(100);
+    // rigid_body.setAngularDamping(100);
 
     // let collider_desc =
     //     RAPIER.ColliderDesc.convexMesh(c.geometry.attributes.position.array,
     //                                    c.geometry.index.array);
-   let collider_desc =
-       RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
+    let collider_desc;
+    if (c.geometry.type == "BoxGeometry") {
+        // collider_desc = RAPIER.ColliderDesc.cuboid(c.geometry.parameters.width/2,
+        //      c.geometry.parameters.height/2,
+        //      c.geometry.parameters.depth/2);
+
+        collider_desc =
+            RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
+
+    } else {
+        collider_desc =
+            RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
+    }
+
+
+
     // let collider_desc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
 
-    console.log("collider_desc", c.geometry.attributes.position.array,
-                                   c.geometry.index.array, collider_desc);
+    // console.log("collider_desc", c.geometry.attributes.position.array,
+    //                                c.geometry.index.array, collider_desc);
     // if (f > 0) {
     //     collider_desc.setFriction(f)
     //     collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
@@ -38,6 +53,9 @@ export function addLink(type, v, c, world, scene) {
 
     // let cd = getColliderDesc(world, scene, c);
     let collider = world.createCollider(collider_desc, rigid_body);
+
+    console.log("collider shape", collider.shape);
+
 
     c.material = new THREE.MeshLambertMaterial({color: 0x333333});
     scene.add(c);
