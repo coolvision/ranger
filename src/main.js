@@ -152,6 +152,7 @@ async function init() {
         'a1_description' : '/src/robots/a1_description'            // The equivalent of a (list of) ROS package(s):// directory
     };
     loader.parseCollision = true;
+    loader.parseVisual = false;
     loader.load(
       '/src/robots/a1_description/urdf/a1.urdf',                    // The path to the URDF within the package OR absolute
       result => {
@@ -161,26 +162,42 @@ async function init() {
 
     manager.onLoad = () => {
 
-        // console.log("links", robot.links);
-        let x = 0;
+        console.log("urdf", urdf);
+
+        // let x = 0;
         for (let l in urdf.links) {
-            if (l == "base") continue;
-            if (l == "trunk") continue;
+            // if (l == "base") continue;
+            // if (l == "trunk") continue;
             console.log("link", l, urdf.links[l]);
 
             if (urdf.links[l].children.length >= 2) {
 
                 // is it the same for all URDFs?
-                let v = urdf.links[l].children[0].children[0].children[0];
-                let c = urdf.links[l].children[1].children[0];
+                // let v = urdf.links[l].children[0].children[0].children[0];
+                let c = urdf.links[l].children[0].children[0];
 
-                if (v && c) {
-                    console.log("visual", v);
-                    console.log("collider", c);
+                if (c) {
+                    // console.log("visual", v);
+                    // console.log("collider", c);
 
-                    a1_robot.links[l] = utils.addLink("dynamic", v, c, world, scene);
+                    a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene);
                 }
             }
+
+
+            // if (urdf.links[l].children.length >= 2) {
+            //
+            //     // is it the same for all URDFs?
+            //     let v = urdf.links[l].children[0].children[0].children[0];
+            //     let c = urdf.links[l].children[1].children[0];
+            //
+            //     if (v && c) {
+            //         // console.log("visual", v);
+            //         // console.log("collider", c);
+            //
+            //         a1_robot.links[l] = utils.addLink("dynamic", v, c, world, scene);
+            //     }
+            // }
         }
 
         console.log("a1_robot", a1_robot)

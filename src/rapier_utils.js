@@ -27,20 +27,18 @@ export function addLink(type, v, c, world, scene) {
     //     RAPIER.ColliderDesc.convexMesh(c.geometry.attributes.position.array,
     //                                    c.geometry.index.array);
     let collider_desc;
+    let p = c.geometry.parameters;
     if (c.geometry.type == "BoxGeometry") {
-        // collider_desc = RAPIER.ColliderDesc.cuboid(c.geometry.parameters.width/2,
-        //      c.geometry.parameters.height/2,
-        //      c.geometry.parameters.depth/2);
-
-        collider_desc =
-            RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
-
+        collider_desc = RAPIER.ColliderDesc.cuboid(p.width/2, p.height/2, p.depth/2);
+    } else if (c.geometry.type == "SphereGeometry") {
+        collider_desc = RAPIER.ColliderDesc.ball(p.radius);
+    } else if (c.geometry.type == "CylinderGeometry") {
+        collider_desc = RAPIER.ColliderDesc.cylinder(p.height/2, p.radiusTop);
     } else {
+        console.log("use ColliderDesc.convexHull");
         collider_desc =
             RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
     }
-
-
 
     // let collider_desc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
 
@@ -54,8 +52,7 @@ export function addLink(type, v, c, world, scene) {
     // let cd = getColliderDesc(world, scene, c);
     let collider = world.createCollider(collider_desc, rigid_body);
 
-    console.log("collider shape", collider.shape);
-
+    // console.log("collider shape", collider.shape);
 
     c.material = new THREE.MeshLambertMaterial({color: 0x333333});
     scene.add(c);
