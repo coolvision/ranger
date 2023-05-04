@@ -145,9 +145,11 @@ async function init() {
 	transform_ctrl.setSpace("local");
 	transform_ctrl.attach(pointer_target);
 
+
 	scene.add(transform_ctrl);
 
     pointer_target.position.set(0, 0.5, 0);
+    pointer_target.rotateX(Math.PI/2);
 
 
 
