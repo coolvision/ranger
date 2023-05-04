@@ -165,7 +165,7 @@ async function init() {
     loader.parseCollision = true;
     loader.parseVisual = false;
     loader.load(
-      '/src/robots/a1_description/urdf/a1_1.urdf',                    // The path to the URDF within the package OR absolute
+      '/src/robots/a1_description/urdf/a1_simple.urdf',                    // The path to the URDF within the package OR absolute
       result => {
           urdf = result;
       }

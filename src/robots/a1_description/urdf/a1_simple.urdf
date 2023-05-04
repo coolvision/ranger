@@ -25,31 +25,7 @@
       <inertia ixx="0.0158533" ixy="-3.66e-05" ixz="-6.11e-05" iyy="0.0377999" iyz="-2.75e-05" izz="0.0456542"/>
     </inertial>
   </link>
-  <joint name="imu_joint" type="fixed">
-    <parent link="trunk"/>
-    <child link="imu_link"/>
-    <origin rpy="0 0 0" xyz="0 0 0"/>
-  </joint>
-  <link name="imu_link">
-    <inertial>
-      <mass value="0.001"/>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
-    </inertial>
-    <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <geometry>
-        <box size="0.001 0.001 0.001"/>
-      </geometry>
-      <material name="red"/>
-    </visual>
-    <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <geometry>
-        <box size=".001 .001 .001"/>
-      </geometry>
-    </collision>
-  </link>
+ 
   <joint name="FR_hip_joint" type="revolute">
     <origin rpy="0 0 0" xyz="0.1805 -0.047 0"/>
     <parent link="trunk"/>
