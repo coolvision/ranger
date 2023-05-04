@@ -17,7 +17,7 @@ export function addLink(type, v, c, world, scene, p, q) {
 
     let rigid_body = world.createRigidBody(body_desc);
 
-    // rigid_body.setAdditionalMass(100);
+    rigid_body.setAdditionalMass(1);
     // rigid_body.setAdditionalMass(m);
     // rigid_body.setGravityScale(0);
     rigid_body.setAngularDamping(100);

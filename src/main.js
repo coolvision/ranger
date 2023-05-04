@@ -25,6 +25,8 @@ let robot;
 let target_direction = new THREE.Vector3();
 let target_rotation = new THREE.Quaternion();
 
+let control_trunk = true;
+
 let socket;
 let motion_task = {
     done: true,
@@ -149,7 +151,7 @@ async function init() {
 	scene.add(transform_ctrl);
 
     pointer_target.position.set(0, 0.5, 0);
-    pointer_target.rotateX(Math.PI/2);
+    pointer_target.rotateX(-Math.PI/2);
 
 
 
@@ -236,10 +238,12 @@ async function init() {
             } else if (urdf.joints[j]._jointType == "revolute") {
                 joint = utils.revoluteJoint(world, child_link, parent_link,
                     {x: a.x, y: a.y, z: a.z}, 0, 0, 0, p.x, p.y, p.z);
+                joint.configureMotorPosition(0, 10000, 10);
             } else {
                 console.log("joint", urdf.joints[j]._jointType);
             }
             joint.setContactsEnabled(false);
+
             a1_robot.joints[j] = joint;
         }
 
@@ -304,7 +308,7 @@ function render() {
     // robot.updateModels();
 
 
-    if (a1_robot.links["trunk"]) {
+    if (a1_robot.links["trunk"] && control_trunk) {
 
         let p = pointer_target.position;
         a1_robot.links["trunk"].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
@@ -337,6 +341,14 @@ window.addEventListener('keydown', function(event) {
     // console.log("keydown", event.code)
 
     switch ( event.code ) {
+        case "KeyC":
+            control_trunk = !control_trunk;
+            if (!control_trunk) {
+                a1_robot.links["trunk"].r.setBodyType(0);
+            } else {
+                a1_robot.links["trunk"].r.setBodyType(2);
+            }
+            break;
         case "KeyN":
             robot.saveState();
             break;
