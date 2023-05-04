@@ -2,15 +2,13 @@
 import * as THREE from 'three';
 import RAPIER from '../lib/rapier3d-compat';
 
-export function addLink(type, v, c, world, scene) {
+export function addLink(type, v, c, world, scene, p, q) {
 
     let body_desc;
     if (type == "position") {
         body_desc = RAPIER.RigidBodyDesc.kinematicPositionBased();
-        //.setTranslation(x, y, z);
     } else {
         body_desc = RAPIER.RigidBodyDesc.dynamic();
-        //.setTranslation(x, y, z);
     }
 
     body_desc.setCanSleep(false);
@@ -18,69 +16,57 @@ export function addLink(type, v, c, world, scene) {
 
     let rigid_body = world.createRigidBody(body_desc);
 
-    rigid_body.setAdditionalMass(100);
+    // rigid_body.setAdditionalMass(100);
     // rigid_body.setAdditionalMass(m);
-    // rigid_body.setGravityScale(1);
+    // rigid_body.setGravityScale(0);
     // rigid_body.setAngularDamping(100);
 
-    // let collider_desc =
-    //     RAPIER.ColliderDesc.convexMesh(c.geometry.attributes.position.array,
-    //                                    c.geometry.index.array);
     let collider_desc;
-    let p = c.geometry.parameters;
+    let params = c.geometry.parameters;
     if (c.geometry.type == "BoxGeometry") {
-        collider_desc = RAPIER.ColliderDesc.cuboid(p.width/2, p.height/2, p.depth/2);
+        collider_desc = RAPIER.ColliderDesc.cuboid(params.width/2, params.height/2, params.depth/2)
+            .setTranslation(p.x, p.y, p.z)
+            .setRotation({ w: q.w, x: q.x, y: q.y, z: q.z });
     } else if (c.geometry.type == "SphereGeometry") {
-        collider_desc = RAPIER.ColliderDesc.ball(p.radius);
+        collider_desc = RAPIER.ColliderDesc.ball(params.radius)
+            .setTranslation(p.x, p.y, p.z)
+            .setRotation({ w: q.w, x: q.x, y: q.y, z: q.z });
     } else if (c.geometry.type == "CylinderGeometry") {
-        collider_desc = RAPIER.ColliderDesc.cylinder(p.height/2, p.radiusTop);
+
+        let q1 = new THREE.Quaternion();
+        q1.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI/2);
+        q.multiply(q1);
+
+        collider_desc = RAPIER.ColliderDesc.cylinder(params.height/2, params.radiusTop)
+            .setTranslation(p.x, p.y, p.z)
+            .setRotation({ w: q.w, x: q.x, y: q.y, z: q.z });
     } else {
-        console.log("use ColliderDesc.convexHull");
-        collider_desc =
-            RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
+        console.log("ColliderDesc.convexHull?");
+        // collider_desc =
+            // RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
     }
 
-    // let collider_desc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
-
-    // console.log("collider_desc", c.geometry.attributes.position.array,
-    //                                c.geometry.index.array, collider_desc);
     // if (f > 0) {
     //     collider_desc.setFriction(f)
     //     collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
     // }
 
-    // let cd = getColliderDesc(world, scene, c);
     let collider = world.createCollider(collider_desc, rigid_body);
 
-    // console.log("collider shape", collider.shape);
-
     c.material = new THREE.MeshLambertMaterial({color: 0x333333});
+
+    c.geometry.applyQuaternion(q);
+    c.geometry.translate(p.x, p.y, p.z);
+
     scene.add(c);
     // scene.add(v);
+
     return {
         r: rigid_body,
         c: collider,
         m: c,
         t: type,
         scale: c.scale.clone()
-    }
-}
-
-export function getLinkColliderDesc(world, scene, c) {
-
-
-
-    // let geometry = new THREE.BoxGeometry(width, height, depth);
-    // let mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: color}));
-    // scene.add(mesh);
-
-    return {
-        cd: collider_desc,
-        // m: mesh,
-        // i: mesh.geometry.parameters,
-        // w: width,
-        // h: height,
-        // d: depth
     }
 }
 

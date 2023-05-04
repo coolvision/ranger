@@ -96,11 +96,14 @@ function env_setup() {
     controls.damping = 0.2;
     controls.addEventListener('change', render);
 
+    const axesHelper = new THREE.AxesHelper(1);
+    scene.add(axesHelper);
 }
 
 
 let a1_robot = {
-    links: {}
+    links: {},
+    joints: {}
 };
 
 await init();
@@ -129,17 +132,24 @@ async function init() {
     // robot.base.r.recomputeMassPropertiesFromColliders();
     // robot.base.m.add(pointer_target);
     //
-	// transform_ctrl = new TransformControls(camera, renderer.domElement);
-	// transform_ctrl.addEventListener('change', render);
-	// transform_ctrl.addEventListener('dragging-changed', function (event) {
-    //  	controls.enabled = ! event.value;
-	// });
-	// transform_ctrl.size = 0.75
-	// transform_ctrl.setSpace("local");
-	// transform_ctrl.attach(pointer_target);
-    //
-	// scene.add(transform_ctrl);
-    //
+
+    scene.add(pointer_target);
+
+	transform_ctrl = new TransformControls(camera, renderer.domElement);
+	transform_ctrl.addEventListener('change', render);
+	transform_ctrl.addEventListener('dragging-changed', function (event) {
+     	controls.enabled = ! event.value;
+	});
+	transform_ctrl.size = 0.75
+	transform_ctrl.setSpace("local");
+	transform_ctrl.attach(pointer_target);
+
+	scene.add(transform_ctrl);
+
+    pointer_target.position.set(0, 0.5, 0);
+
+
+
     // pointer_target.position.set(0.15, 0.455, 0.5);
 
 
@@ -154,7 +164,7 @@ async function init() {
     loader.parseCollision = true;
     loader.parseVisual = false;
     loader.load(
-      '/src/robots/a1_description/urdf/a1.urdf',                    // The path to the URDF within the package OR absolute
+      '/src/robots/a1_description/urdf/a1_1.urdf',                    // The path to the URDF within the package OR absolute
       result => {
           urdf = result;
       }
@@ -162,47 +172,75 @@ async function init() {
 
     manager.onLoad = () => {
 
+        // urdf.rotateX(- Math.PI / 2);
+        scene.add(urdf)
+
         console.log("urdf", urdf);
 
         // let x = 0;
         for (let l in urdf.links) {
             // if (l == "base") continue;
             // if (l == "trunk") continue;
-            console.log("link", l, urdf.links[l]);
+            // console.log("link", l, urdf.links[l]);
 
-            if (urdf.links[l].children.length >= 2) {
+            if (urdf.links[l].children.length >= 1) {
 
                 // is it the same for all URDFs?
                 // let v = urdf.links[l].children[0].children[0].children[0];
                 let c = urdf.links[l].children[0].children[0];
 
-                if (c) {
+                if (c && c.type == "Mesh") {
                     // console.log("visual", v);
                     // console.log("collider", c);
+                    let u = urdf.links[l].children[0];
 
-                    a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene);
+                    // a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene, p.x, p.y, p.z);
+
+                    if (l == "trunk") {
+                        a1_robot.links[l] = utils.addLink("position", c, c, world, scene, u.position, u.quaternion);
+                    } else {
+                        a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene, u.position, u.quaternion);
+                    }
+
+                    let p = new THREE.Vector3(0, 0, 0);
+                    console.log("link", l, "position", u.position,
+                                           "quaternion", u.quaternion,
+                                           "world", a1_robot.links[l].m.getWorldPosition(p));
                 }
             }
+        }
 
 
-            // if (urdf.links[l].children.length >= 2) {
-            //
-            //     // is it the same for all URDFs?
-            //     let v = urdf.links[l].children[0].children[0].children[0];
-            //     let c = urdf.links[l].children[1].children[0];
-            //
-            //     if (v && c) {
-            //         // console.log("visual", v);
-            //         // console.log("collider", c);
-            //
-            //         a1_robot.links[l] = utils.addLink("dynamic", v, c, world, scene);
-            //     }
-            // }
+        for (let j in urdf.joints) {
+            // if (l == "base") continue;
+            // if (l == "trunk") continue;
+            // console.log("link", l, urdf.links[l]);
+
+            let child_name = urdf.joints[j].children[0].name;
+            let parent_name = urdf.joints[j].parent.name;
+            console.log("joint", j,
+                urdf.joints[j],
+                // urdf.joints[j].position,
+                "child", child_name, "parent", parent_name);
+            let child_link = a1_robot.links[child_name];
+            let parent_link = a1_robot.links[parent_name];
+            let p = urdf.joints[j].position;
+            let a = urdf.joints[j].axis;
+
+            let joint;
+            if (urdf.joints[j]._jointType == "fixed") {
+                joint = utils.fixedJoint(world, child_link, parent_link, 0, 0, 0, p.x, p.y, p.z);
+            } else if (urdf.joints[j]._jointType == "revolute") {
+                joint = utils.revoluteJoint(world, child_link, parent_link,
+                    {x: a.x, y: a.y, z: a.z}, 0, 0, 0, p.x, p.y, p.z);
+            } else {
+                console.log("joint", urdf.joints[j]._jointType);
+            }
+            a1_robot.joints[j] = joint;
         }
 
         console.log("a1_robot", a1_robot)
     };
-
 
     renderer.setAnimationLoop(render);
 }
@@ -260,6 +298,16 @@ function render() {
     world.step(eventQueue);
 
     // robot.updateModels();
+
+
+    if (a1_robot.links["trunk"]) {
+
+        let p = pointer_target.position;
+        a1_robot.links["trunk"].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+
+        let q = pointer_target.quaternion;
+        a1_robot.links["trunk"].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    }
 
     utils.updateLinks(a1_robot);
 
