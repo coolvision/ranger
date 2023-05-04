@@ -1,6 +1,7 @@
 
 import * as THREE from 'three';
 import RAPIER from '../lib/rapier3d-compat';
+// import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
 
 export function addLink(type, v, c, world, scene, p, q) {
 
@@ -45,7 +46,10 @@ export function addLink(type, v, c, world, scene, p, q) {
         // collider_desc =
             // RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
     }
-
+    // collider_desc =
+    //     RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array)
+    //     .setTranslation(p.x, p.y, p.z)
+    //     .setRotation({ w: q.w, x: q.x, y: q.y, z: q.z });
     // if (f > 0) {
     //     collider_desc.setFriction(f)
     //     collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
