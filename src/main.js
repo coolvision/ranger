@@ -58,7 +58,8 @@ function scene_setup() {
     // scene.background = new THREE.Color(0xf0f0f0);
 	scene.background = new THREE.Color(0x999999);
 
-    camera = new THREE.PerspectiveCamera(70, w / h, 0.1, 100);
+    // camera = new THREE.PerspectiveCamera(70, w / h, 0.1, 100);
+    camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
     camera.position.set(0, 1.5, 2.2);
     scene.add(camera);
 }
@@ -164,7 +165,7 @@ async function init() {
     loader.parseCollision = true;
     loader.parseVisual = false;
     loader.load(
-      '/src/robots/a1_description/urdf/a1_1.urdf',                    // The path to the URDF within the package OR absolute
+      '/src/robots/a1_description/urdf/a1_simple.urdf',                    // The path to the URDF within the package OR absolute
       result => {
           urdf = result;
       }
@@ -201,6 +202,7 @@ async function init() {
                     } else {
                         a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene, u.position, u.quaternion);
                     }
+                    a1_robot.links[l].c.is_robot = true;
 
                     let p = new THREE.Vector3(0, 0, 0);
                     console.log("link", l, "position", u.position,
@@ -236,6 +238,7 @@ async function init() {
             } else {
                 console.log("joint", urdf.joints[j]._jointType);
             }
+            joint.setContactsEnabled(false);
             a1_robot.joints[j] = joint;
         }
 
