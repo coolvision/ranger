@@ -19,7 +19,7 @@ export function addLink(type, v, c, world, scene, p, q) {
     // rigid_body.setAdditionalMass(100);
     // rigid_body.setAdditionalMass(m);
     // rigid_body.setGravityScale(0);
-    // rigid_body.setAngularDamping(100);
+    rigid_body.setAngularDamping(100);
 
     let collider_desc;
     let params = c.geometry.parameters;

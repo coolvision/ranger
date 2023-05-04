@@ -65,19 +65,24 @@
     <collision>
       <origin rpy="1.57079632679 0 0" xyz="0 0 0"/>
       <geometry>
+        <!-- <cylinder length="0.04" radius="0.046"/> -->
         <cylinder length="0.032" radius="0.041"/>
       </geometry>
     </collision>
   </link>
 
+
+
   <joint name="FR_thigh_joint" type="revolute">
-    <origin rpy="0 0 0" xyz="0 -0.0838 0"/>
+    <!-- <origin rpy="0 0 0" xyz="0 -0.0838 0"/> -->
+    <origin rpy="0 0 0" xyz="0 -0.11 0"/>
     <parent link="FR_hip"/>
     <child link="FR_thigh"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0.01" friction="0.2"/>
     <limit effort="33.5" lower="-1.0471975512" upper="4.18879020479" velocity="21"/>
   </joint>
+
   <link name="FR_thigh">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -88,6 +93,7 @@
     </visual>
     <collision>
       <origin rpy="0 1.57079632679 0" xyz="0 0 -0.1"/>
+      <!-- <origin rpy="0 1.57079632679 0" xyz="0 0 0"/> -->
       <geometry>
         <box size="0.2 0.0245 0.034"/>
       </geometry>
@@ -98,6 +104,8 @@
       <inertia ixx="0.005529065" ixy="-4.825e-06" ixz="0.000343869" iyy="0.005139339" iyz="-2.2448e-05" izz="0.001367788"/>
     </inertial>
   </link>
+
+  <!--
   <joint name="FR_calf_joint" type="revolute">
     <origin rpy="0 0 0" xyz="0 0 -0.2"/>
     <parent link="FR_thigh"/>
@@ -149,6 +157,6 @@
       <mass value="0.06"/>
       <inertia ixx="9.6e-06" ixy="0.0" ixz="0.0" iyy="9.6e-06" iyz="0.0" izz="9.6e-06"/>
     </inertial>
-  </link>
+  </link> -->
 
 </robot>
