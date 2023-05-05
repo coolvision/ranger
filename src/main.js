@@ -324,7 +324,7 @@ function render() {
     // });
     // robot.updateGripperState();
 
-    world.step(eventQueue);
+    // world.step(eventQueue);
 
     // robot.updateModels();
 
