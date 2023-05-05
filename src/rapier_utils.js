@@ -13,14 +13,14 @@ export function addLink(type, v, c, world, scene, p, q) {
     }
 
     body_desc.setCanSleep(false);
-    body_desc.setCcdEnabled(true);
+    // body_desc.setCcdEnabled(true);
 
     let rigid_body = world.createRigidBody(body_desc);
 
-    rigid_body.setAdditionalMass(1);
+    // rigid_body.setAdditionalMass(10);
     // rigid_body.setAdditionalMass(m);
     // rigid_body.setGravityScale(0);
-    rigid_body.setAngularDamping(100);
+    // rigid_body.setAngularDamping(100);
 
     let collider_desc;
     let params = c.geometry.parameters;
@@ -54,6 +54,9 @@ export function addLink(type, v, c, world, scene, p, q) {
     //     collider_desc.setFriction(f)
     //     collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
     // }
+
+    // collider_desc.setFriction(10);
+    // collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
 
     let collider = world.createCollider(collider_desc, rigid_body);
 

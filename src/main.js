@@ -203,9 +203,18 @@ async function init() {
 
                     if (l == "trunk") {
                         a1_robot.links[l] = utils.addLink("position", c, c, world, scene, u.position, u.quaternion);
+                        // a1_robot.links[l].r.setAdditionalMass(0);
                     } else {
                         a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene, u.position, u.quaternion);
+                        // a1_robot.links[l].r.setAdditionalMass(1);
                     }
+
+                    // a1_robot.links[l].r.setGravityScale(0);
+                    // if (l.includes("foot")) {
+                    //     a1_robot.links[l].r.setGravityScale(1);
+                    //     a1_robot.links[l].r.setAdditionalMass(1);
+                    // }
+
                     a1_robot.links[l].c.is_robot = true;
 
                     let p = new THREE.Vector3(0, 0, 0);
@@ -238,7 +247,19 @@ async function init() {
             } else if (urdf.joints[j]._jointType == "revolute") {
                 joint = utils.revoluteJoint(world, child_link, parent_link,
                     {x: a.x, y: a.y, z: a.z}, 0, 0, 0, p.x, p.y, p.z);
-                joint.configureMotorPosition(0, 10000, 10);
+                joint.configureMotorPosition(0, 100000, 1);
+                // if (j.includes("RR_hip_joint")) {
+                //     joint.configureMotorPosition(-Math.PI/8, 10000, 1);
+                // }
+                // if (j.includes("RL_hip_joint")) {
+                //     joint.configureMotorPosition(Math.PI/8, 10000, 1);
+                // }
+                // if (j.includes("FR_hip_joint")) {
+                //     joint.configureMotorPosition(-Math.PI/8, 10000, 1);
+                // }
+                // if (j.includes("FL_hip_joint")) {
+                //     joint.configureMotorPosition(Math.PI/8, 10000, 1);
+                // }
             } else {
                 console.log("joint", urdf.joints[j]._jointType);
             }
