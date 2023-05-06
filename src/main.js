@@ -1,6 +1,8 @@
 
 import * as THREE from 'three';
-import RAPIER from '../lib/rapier3d-compat';
+// import RAPIER from '../lib/rapier3d-compat';
+import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
+
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { S1 } from './robots/s1.js'
@@ -26,6 +28,8 @@ let target_direction = new THREE.Vector3();
 let target_rotation = new THREE.Quaternion();
 
 let control_trunk = true;
+
+let leg_controls = {};
 
 let socket;
 let motion_task = {
@@ -109,6 +113,20 @@ let a1_robot = {
     joints: {}
 };
 
+function addControls(camera, renderer, scene, target) {
+
+    let transform_ctrl = new TransformControls(camera, renderer.domElement);
+    transform_ctrl.addEventListener('change', render);
+    transform_ctrl.addEventListener('dragging-changed', function (event) {
+        controls.enabled = ! event.value;
+    });
+    transform_ctrl.size = 0.75
+    transform_ctrl.setSpace("local");
+    transform_ctrl.attach(target);
+    scene.add(transform_ctrl);
+    return transform_ctrl;
+}
+
 await init();
 async function init() {
 
@@ -137,26 +155,10 @@ async function init() {
     //
 
     scene.add(pointer_target);
-
-	transform_ctrl = new TransformControls(camera, renderer.domElement);
-	transform_ctrl.addEventListener('change', render);
-	transform_ctrl.addEventListener('dragging-changed', function (event) {
-     	controls.enabled = ! event.value;
-	});
-	transform_ctrl.size = 0.75
-	transform_ctrl.setSpace("local");
-	transform_ctrl.attach(pointer_target);
-
-
-	scene.add(transform_ctrl);
-
     pointer_target.position.set(0, 0.5, 0);
     pointer_target.rotateX(-Math.PI/2);
 
-
-
-    // pointer_target.position.set(0.15, 0.455, 0.5);
-
+    transform_ctrl = addControls(camera, renderer, scene, pointer_target);
 
     env_setup();
 
@@ -222,11 +224,11 @@ async function init() {
                         // a1_robot.links[l].r.setAdditionalMass(1);
                     }
 
-                    // a1_robot.links[l].r.setGravityScale(0);
-                    // if (l.includes("foot")) {
-                    //     a1_robot.links[l].r.setGravityScale(1);
-                    //     a1_robot.links[l].r.setAdditionalMass(1);
-                    // }
+                    a1_robot.links[l].r.setGravityScale(0);
+                    if (l.includes("foot")) {
+                        a1_robot.links[l].r.setGravityScale(1);
+                        a1_robot.links[l].r.setAdditionalMass(0.001);
+                    }
 
                     a1_robot.links[l].c.is_robot = true;
 
@@ -237,6 +239,8 @@ async function init() {
                 }
             }
         }
+
+        leg_controls["RL_foot"] = addControls(camera, renderer, scene, a1_robot.links["RL_foot"].m);
 
         // utils.updateLinks2(a1_robot);
 
