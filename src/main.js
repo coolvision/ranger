@@ -177,8 +177,9 @@ async function init() {
 
     manager.onLoad = () => {
 
-        // urdf.rotateX(- Math.PI / 2);
-        scene.add(urdf)
+        urdf.position.copy(pointer_target.position);
+        urdf.rotateX(-Math.PI/2);
+        scene.add(urdf);
 
         console.log("urdf", urdf);
 
@@ -201,11 +202,23 @@ async function init() {
 
                     // a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene, p.x, p.y, p.z);
 
+                    let p = new THREE.Vector3();
+                    u.getWorldPosition(p);
+                    let q = new THREE.Quaternion();
+                    u.getWorldQuaternion(q);
+
+                    console.log(l, "local p", u.position, "world", p);
+                    console.log(l, "local q", u.quaternion, "world", q);
+
+                    p.copy(u.position);
+                    q.copy(u.quaternion);
+
                     if (l == "trunk") {
-                        a1_robot.links[l] = utils.addLink("position", c, c, world, scene, u.position, u.quaternion);
+                        a1_robot.links[l] = utils.addLink("position", c, c, world, scene, p, q);
                         // a1_robot.links[l].r.setAdditionalMass(0);
+                        // a1_robot.links[l].r.setGravityScale(0);
                     } else {
-                        a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene, u.position, u.quaternion);
+                        a1_robot.links[l] = utils.addLink("dynamic", c, c, world, scene, p, q);
                         // a1_robot.links[l].r.setAdditionalMass(1);
                     }
 
@@ -217,13 +230,15 @@ async function init() {
 
                     a1_robot.links[l].c.is_robot = true;
 
-                    let p = new THREE.Vector3(0, 0, 0);
-                    console.log("link", l, "position", u.position,
-                                           "quaternion", u.quaternion,
-                                           "world", a1_robot.links[l].m.getWorldPosition(p));
+                    // let p = new THREE.Vector3(0, 0, 0);
+                    // console.log("link", l, "position", u.position,
+                    //                        "quaternion", u.quaternion,
+                    //                        "world", a1_robot.links[l].m.getWorldPosition(p));
                 }
             }
         }
+
+        // utils.updateLinks2(a1_robot);
 
         for (let j in urdf.joints) {
             // if (l == "base") continue;
@@ -247,19 +262,21 @@ async function init() {
             } else if (urdf.joints[j]._jointType == "revolute") {
                 joint = utils.revoluteJoint(world, child_link, parent_link,
                     {x: a.x, y: a.y, z: a.z}, 0, 0, 0, p.x, p.y, p.z);
+                // joint.configureMotorModel(0);
                 joint.configureMotorPosition(0, 100000, 1);
-                // if (j.includes("RR_hip_joint")) {
-                //     joint.configureMotorPosition(-Math.PI/8, 10000, 1);
-                // }
-                // if (j.includes("RL_hip_joint")) {
-                //     joint.configureMotorPosition(Math.PI/8, 10000, 1);
-                // }
-                // if (j.includes("FR_hip_joint")) {
-                //     joint.configureMotorPosition(-Math.PI/8, 10000, 1);
-                // }
-                // if (j.includes("FL_hip_joint")) {
-                //     joint.configureMotorPosition(Math.PI/8, 10000, 1);
-                // }
+
+                if (j.includes("RR_hip_joint")) {
+                    joint.configureMotorPosition(-Math.PI/8, 10000, 1);
+                }
+                if (j.includes("RL_hip_joint")) {
+                    joint.configureMotorPosition(Math.PI/8, 10000, 1);
+                }
+                if (j.includes("FR_hip_joint")) {
+                    joint.configureMotorPosition(-Math.PI/8, 10000, 1);
+                }
+                if (j.includes("FL_hip_joint")) {
+                    joint.configureMotorPosition(Math.PI/8, 10000, 1);
+                }
             } else {
                 console.log("joint", urdf.joints[j]._jointType);
             }
@@ -324,7 +341,7 @@ function render() {
     // });
     // robot.updateGripperState();
 
-    // world.step(eventQueue);
+    world.step(eventQueue);
 
     // robot.updateModels();
 

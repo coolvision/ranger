@@ -11,11 +11,30 @@ export function addLink(type, v, c, world, scene, p, q) {
     } else {
         body_desc = RAPIER.RigidBodyDesc.dynamic();
     }
-
     body_desc.setCanSleep(false);
     // body_desc.setCcdEnabled(true);
 
     let rigid_body = world.createRigidBody(body_desc);
+
+    let link = c.parent.parent;
+    let p1 = new THREE.Vector3();
+    link.getWorldPosition(p1);
+    let q1 = new THREE.Quaternion();
+    link.getWorldQuaternion(q1);
+
+    scene.add(c);
+    c.position.copy(p1);
+    c.quaternion.copy(q1);
+
+    rigid_body.setTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
+    rigid_body.setRotation({w: q1.w, x: q1.x, y: q1.y, z: q1.z}, true);
+
+    // let m = new THREE.Object3D();
+    // m.position.copy(p1);
+    // m.quaternion.copy(q1);
+    // c.position.set(9, 0, 0);
+    // c.quaternion.identity();
+    // m.add(c);
 
     // rigid_body.setAdditionalMass(10);
     // rigid_body.setAdditionalMass(m);
@@ -61,7 +80,6 @@ export function addLink(type, v, c, world, scene, p, q) {
     let collider = world.createCollider(collider_desc, rigid_body);
 
     c.material = new THREE.MeshLambertMaterial({color: 0x333333});
-
     c.geometry.applyQuaternion(q);
     c.geometry.translate(p.x, p.y, p.z);
 
@@ -106,6 +124,23 @@ export function updateLinks(r) {
         r.links[i].m.applyMatrix4(m_parent);
 
         r.links[i].m.updateWorldMatrix(true, true);
+    }
+}
+
+export function updateLinks2(r) {
+
+    for (let i in r.links) {
+        r.links[i].r.wakeUp();
+
+        r.links[i].m.updateWorldMatrix(true, true);
+
+        let p = new THREE.Vector3();
+        r.links[i].m.getWorldPosition(p);
+        let q = new THREE.Quaternion();
+        r.links[i].m.getWorldQuaternion(q);
+
+        r.links[i].r.setTranslation({x: p.x, y: p.y, z: p.z}, true);
+        r.links[i].r.setRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
 }
 
