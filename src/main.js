@@ -30,6 +30,8 @@ let target_rotation = new THREE.Quaternion();
 let control_trunk = true;
 
 let leg_controls = {};
+let leg_targets = {};
+let leg_links = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"];
 
 let socket;
 let motion_task = {
@@ -120,7 +122,7 @@ function addControls(camera, renderer, scene, target) {
     transform_ctrl.addEventListener('dragging-changed', function (event) {
         controls.enabled = ! event.value;
     });
-    transform_ctrl.size = 0.75
+    transform_ctrl.size = 0.3
     transform_ctrl.setSpace("local");
     transform_ctrl.attach(target);
     scene.add(transform_ctrl);
@@ -224,10 +226,10 @@ async function init() {
                         // a1_robot.links[l].r.setAdditionalMass(1);
                     }
 
-                    a1_robot.links[l].r.setGravityScale(0);
+                    // a1_robot.links[l].r.setGravityScale(0);
                     if (l.includes("foot")) {
-                        a1_robot.links[l].r.setGravityScale(1);
-                        a1_robot.links[l].r.setAdditionalMass(0.001);
+                        // a1_robot.links[l].r.setGravityScale(1);
+                        // a1_robot.links[l].r.setAdditionalMass(0.001);
                     }
 
                     a1_robot.links[l].c.is_robot = true;
@@ -240,7 +242,14 @@ async function init() {
             }
         }
 
-        leg_controls["RL_foot"] = addControls(camera, renderer, scene, a1_robot.links["RL_foot"].m);
+        for (let j of leg_links) {
+            a1_robot.links[j].r.setBodyType(2);
+            leg_targets[j] = new THREE.Mesh();
+            scene.add(leg_targets[j]);
+            leg_targets[j].position.copy(a1_robot.links[j].m.position);
+            leg_targets[j].quaternion.copy(a1_robot.links[j].m.quaternion);
+            leg_controls[j] = addControls(camera, renderer, scene, leg_targets[j]);
+        }
 
         // utils.updateLinks2(a1_robot);
 
@@ -267,20 +276,20 @@ async function init() {
                 joint = utils.revoluteJoint(world, child_link, parent_link,
                     {x: a.x, y: a.y, z: a.z}, 0, 0, 0, p.x, p.y, p.z);
                 // joint.configureMotorModel(0);
-                joint.configureMotorPosition(0, 100000, 1);
+                // joint.configureMotorPosition(0, 100000, 1);
 
-                if (j.includes("RR_hip_joint")) {
-                    joint.configureMotorPosition(-Math.PI/8, 10000, 1);
-                }
-                if (j.includes("RL_hip_joint")) {
-                    joint.configureMotorPosition(Math.PI/8, 10000, 1);
-                }
-                if (j.includes("FR_hip_joint")) {
-                    joint.configureMotorPosition(-Math.PI/8, 10000, 1);
-                }
-                if (j.includes("FL_hip_joint")) {
-                    joint.configureMotorPosition(Math.PI/8, 10000, 1);
-                }
+                // if (j.includes("RR_hip_joint")) {
+                //     joint.configureMotorPosition(-Math.PI/8, 10000, 1);
+                // }
+                // if (j.includes("RL_hip_joint")) {
+                //     joint.configureMotorPosition(Math.PI/8, 10000, 1);
+                // }
+                // if (j.includes("FR_hip_joint")) {
+                //     joint.configureMotorPosition(-Math.PI/8, 10000, 1);
+                // }
+                // if (j.includes("FL_hip_joint")) {
+                //     joint.configureMotorPosition(Math.PI/8, 10000, 1);
+                // }
             } else {
                 console.log("joint", urdf.joints[j]._jointType);
             }
@@ -349,15 +358,30 @@ function render() {
 
     // robot.updateModels();
 
-
     if (a1_robot.links["trunk"] && control_trunk) {
-
         let p = pointer_target.position;
         a1_robot.links["trunk"].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-
         let q = pointer_target.quaternion;
         a1_robot.links["trunk"].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
+
+    if (leg_targets["RL_foot"]) {
+        let p = leg_targets["RL_foot"].position;
+        a1_robot.links["RL_foot"].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+        let q = leg_targets["RL_foot"].quaternion;
+        a1_robot.links["RL_foot"].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    }
+
+
+    for (let j of leg_links) {
+        if (leg_targets[j]) {
+            let p = leg_targets[j].position;
+            a1_robot.links[j].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+            let q = leg_targets[j].quaternion;
+            a1_robot.links[j].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+        }
+    }
+
 
     utils.updateLinks(a1_robot);
 
