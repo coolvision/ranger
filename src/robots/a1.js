@@ -60,7 +60,8 @@ export async function load_a1(position, scene, world) {
                 q.copy(u.quaternion);
 
                 if (l == "trunk") {
-                    r.links[l] = utils.addLink("position", c, c, world, scene, p, q);
+                    // r.links[l] = utils.addLink("position", c, c, world, scene, p, q);
+                    r.links[l] = utils.addLink("dynamic", c, c, world, scene, p, q);
                     // r.links[l].r.setAdditionalMass(0);
                     // r.links[l].r.setGravityScale(0);
                 } else {
@@ -68,7 +69,7 @@ export async function load_a1(position, scene, world) {
                     // r.links[l].r.setAdditionalMass(1);
                 }
 
-                // r.links[l].r.setGravityScale(0);
+                r.links[l].r.setGravityScale(0);
                 if (l.includes("foot")) {
                     // r.links[l].r.setGravityScale(1);
                     // r.links[l].r.setAdditionalMass(0.001);
@@ -106,10 +107,30 @@ export async function load_a1(position, scene, world) {
         if (urdf.joints[j]._jointType == "fixed") {
             joint = utils.fixedJoint(world, child_link, parent_link, 0, 0, 0, p.x, p.y, p.z);
         } else if (urdf.joints[j]._jointType == "revolute") {
-            joint = utils.revoluteJoint(world, child_link, parent_link,
-                {x: a.x, y: a.y, z: a.z}, 0, 0, 0, p.x, p.y, p.z);
+            // joint = utils.revoluteJoint(world, child_link, parent_link,
+            //     {x: a.x, y: a.y, z: a.z}, 0, 0, 0, p.x, p.y, p.z);
             // joint.configureMotorModel(0);
-            joint.configureMotorPosition(0, 100000, 1);
+            // joint.configureMotorPosition(0, 100000, 1);
+
+            let params = RAPIER.JointData.revolute({x: p.x, y: p.y, z: p.z},
+                {x: 0, y: 0, z: 0},
+                {x: a.x, y: a.y, z: a.z});
+            let l1 = urdf.joints[j].limit.lower;
+            let l2 = urdf.joints[j].limit.upper;
+            params.limitsEnabled = true;
+            params.limits = [l1, l2];
+            console.log("limits", l1, l2);
+            // joint = world.createImpulseJoint(params, parent_link.r, child_link.r, true);
+
+            joint = world.createMultibodyJoint(params, parent_link.r, child_link.r, true);
+
+            // joint.configureMotorPosition((l1+l2)/2, 100000, 1);
+
+            // if (j.includes("calf_joint")) {
+            //     joint.configureMotorPosition(l1, 100000, 1);
+            // } else {
+                // joint.configureMotorPosition(0, 100000, 1);
+            // }
 
         } else {
             console.log("joint", urdf.joints[j]._jointType);

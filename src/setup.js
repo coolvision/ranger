@@ -33,7 +33,7 @@ export function add_controls(camera, renderer, scene, target) {
     transform_ctrl.addEventListener('dragging-changed', function (event) {
         controls.enabled = ! event.value;
     });
-    transform_ctrl.size = 0.5
+    transform_ctrl.size = 0.5;
     transform_ctrl.setSpace("local");
     transform_ctrl.attach(target);
     scene.add(transform_ctrl);
