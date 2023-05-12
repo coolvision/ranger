@@ -1,7 +1,8 @@
 
 import * as THREE from 'three';
 // import RAPIER from '../lib/rapier3d-compat';
-import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
+import RAPIER from '../lib/rapier.es';
+// import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
 
 export function addLink(type, v, c, world, scene, p, q) {
 
