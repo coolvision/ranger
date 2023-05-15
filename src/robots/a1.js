@@ -63,13 +63,13 @@ export async function load_a1(position, scene, world) {
                     // r.links[l] = utils.addLink("position", c, c, world, scene, p, q);
                     r.links[l] = utils.addLink("dynamic", c, c, world, scene, p, q);
                     // r.links[l].r.setAdditionalMass(0);
-                    // r.links[l].r.setGravityScale(0);
+                    r.links[l].r.setGravityScale(0);
                 } else {
                     r.links[l] = utils.addLink("dynamic", c, c, world, scene, p, q);
-                    // r.links[l].r.setAdditionalMass(1);
+                    r.links[l].r.setGravityScale(-0.5);
                 }
 
-                r.links[l].r.setGravityScale(0);
+
                 if (l.includes("foot")) {
                     // r.links[l].r.setGravityScale(1);
                     // r.links[l].r.setAdditionalMass(0.001);
@@ -126,11 +126,13 @@ export async function load_a1(position, scene, world) {
 
             // joint.configureMotorPosition((l1+l2)/2, 100000, 1);
 
+            // joint.configureMotorModel(1);
             // if (j.includes("calf_joint")) {
-            //     joint.configureMotorPosition(l1, 100000, 1);
+            //     joint.configureMotorPosition(0.5, 10000, 0);
             // } else {
-                // joint.configureMotorPosition(0, 100000, 1);
+            //     joint.configureMotorPosition(0, 10000, 0);
             // }
+
 
         } else {
             console.log("joint", urdf.joints[j]._jointType);
