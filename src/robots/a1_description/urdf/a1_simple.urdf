@@ -110,7 +110,7 @@
     <dynamics damping="0.01" friction="0.2"/>
     <limit effort="33.5" lower="-2.69653369433" upper="-0.916297857297" velocity="21"/>
   </joint>
-  
+
   <link name="FR_calf">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>

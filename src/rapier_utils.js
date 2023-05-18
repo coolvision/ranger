@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import RAPIER from '../lib/rapier.es';
 // import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
 
-export function addLink(type, v, c, world, scene, p, q) {
+export function addLink(type, c, world, scene, p, q) {
 
     let body_desc;
     if (type == "position") {
@@ -13,7 +13,6 @@ export function addLink(type, v, c, world, scene, p, q) {
         body_desc = RAPIER.RigidBodyDesc.dynamic();
     }
     body_desc.setCanSleep(false);
-    // body_desc.setCcdEnabled(true);
 
     let rigid_body = world.createRigidBody(body_desc);
 
@@ -30,17 +29,7 @@ export function addLink(type, v, c, world, scene, p, q) {
     rigid_body.setTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
     rigid_body.setRotation({w: q1.w, x: q1.x, y: q1.y, z: q1.z}, true);
 
-    // let m = new THREE.Object3D();
-    // m.position.copy(p1);
-    // m.quaternion.copy(q1);
-    // c.position.set(9, 0, 0);
-    // c.quaternion.identity();
-    // m.add(c);
-
-    // rigid_body.setAdditionalMass(10);
-    // rigid_body.setAdditionalMass(m);
-    // rigid_body.setGravityScale(0);
-    rigid_body.setAngularDamping(100);
+    // rigid_body.setAngularDamping(100);
 
     let collider_desc;
     let params = c.geometry.parameters;
@@ -66,27 +55,14 @@ export function addLink(type, v, c, world, scene, p, q) {
         // collider_desc =
             // RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
     }
-    // collider_desc =
-    //     RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array)
-    //         .setTranslation(p.x, p.y, p.z)
-    //         .setRotation({ w: q.w, x: q.x, y: q.y, z: q.z });
-
-    // if (f > 0) {
-    //     collider_desc.setFriction(f)
-    //     collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
-    // }
-
-    // collider_desc.setFriction(10);
-    // collider_desc.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
 
     let collider = world.createCollider(collider_desc, rigid_body);
 
     c.material = new THREE.MeshLambertMaterial({color: 0x333333});
+    // c.material.transparent = true;
+    // c.material.opacity = 0.2;
     c.geometry.applyQuaternion(q);
     c.geometry.translate(p.x, p.y, p.z);
-
-    // scene.add(c);
-    // scene.add(v);
 
     return {
         r: rigid_body,
@@ -122,10 +98,18 @@ export function updateLinks(r) {
         r.links[i].m.position.set(0, 0, 0);
         r.links[i].m.quaternion.set(0, 0, 0, 1);
         r.links[i].m.scale.copy(r.links[i].scale);
-
         r.links[i].m.applyMatrix4(m_parent);
-
         r.links[i].m.updateWorldMatrix(true, true);
+
+        if (r.links[i].v) {
+            let pw = new THREE.Vector3();
+            r.links[i].m.getWorldPosition(pw);
+            let qw = new THREE.Quaternion();
+            r.links[i].m.getWorldQuaternion(qw);
+
+            r.links[i].v.position.copy(pw);
+            r.links[i].v.quaternion.copy(qw);
+        }
     }
 }
 

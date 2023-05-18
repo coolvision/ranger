@@ -53,6 +53,8 @@ async function init() {
 
     a1_robot = await load_a1(pointer_target.position, scene, world);
 
+    // console.log("a1_robot", a1_robot)
+
     update_fn(render)();
 }
 
