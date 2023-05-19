@@ -63,12 +63,12 @@ export function render() {
 
     world.step(eventQueue);
 
-    // if (a1_robot.links["trunk"] && control_trunk) {
-    //     let p = pointer_target.position;
-    //     a1_robot.links["trunk"].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-    //     let q = pointer_target.quaternion;
-    //     a1_robot.links["trunk"].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
-    // }
+    if (a1_robot.links["trunk"] && control_trunk) {
+        let p = pointer_target.position;
+        a1_robot.links["trunk"].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+        let q = pointer_target.quaternion;
+        a1_robot.links["trunk"].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    }
 
     for (let j of a1_robot.leg_links) {
         if (a1_robot.leg_targets[j]) {

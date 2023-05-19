@@ -29,7 +29,8 @@ export function addLink(type, c, world, scene, p, q) {
     rigid_body.setTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
     rigid_body.setRotation({w: q1.w, x: q1.x, y: q1.y, z: q1.z}, true);
 
-    // rigid_body.setAngularDamping(100);
+    rigid_body.setAngularDamping(100);
+    rigid_body.setLinearDamping(100);
 
     let collider_desc;
     let params = c.geometry.parameters;

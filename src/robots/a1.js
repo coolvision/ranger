@@ -63,20 +63,20 @@ export async function load_a1(position, scene, world) {
             p.copy(u.position);
             q.copy(u.quaternion);
 
-            // if (l == "trunk") {
-            //     r.links[i] = utils.addLink("position", c, world, scene, p, q);
-            // } else {
+            if (i == "trunk") {
+                r.links[i] = utils.addLink("position", c, world, scene, p, q);
+            } else {
                 r.links[i] = utils.addLink("dynamic", c, world, scene, p, q);
-            // }
+            }
             r.links[i].v = v;
 
             // console.log("add link", i);
 
             // scene.add(v);
-            r.links[i].r.setGravityScale(0);
+            // r.links[i].r.setGravityScale(0);
             if (i == "trunk") {
                 console.log("trunk gravity");
-                r.links[i].r.setGravityScale(-0.1);
+                // r.links[i].r.setGravityScale(-0.1);
             } else {
                 // r.links[i].r.setGravityScale(-0.5);
             }
@@ -174,6 +174,13 @@ function addJoint(world, urdf, r, j) {
             joint = world.createMultibodyJoint(params, parent_link.r, child_link.r, true);
         }
         joint.setContactsEnabled(false);
+
+
+        // if (j.includes("calf_joint")) {
+        //     joint.configureMotorPosition(0.5, 0.01, 0.01);
+        // } else {
+        //     joint.configureMotorPosition(0, 100000, 0);
+        // }
 
     }
     //  else {
