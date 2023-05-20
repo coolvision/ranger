@@ -36,8 +36,8 @@ async function init() {
     world = new RAPIER.World(gravity);
     eventQueue = new RAPIER.EventQueue(true);
     let ip = world.integrationParameters;
-    // ip.erp = 0.8;
-    // ip.maxStabilizationIterations = 10;
+    ip.erp = 0.8;
+    ip.maxStabilizationIterations = 10;
 
     let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 1, 10.0);
     groundColliderDesc.setTranslation(0, -1, 0);
@@ -62,6 +62,8 @@ export function render() {
     stats.begin();
 
     world.step(eventQueue);
+
+    pointer_target.position.x += 0.001;
 
     if (a1_robot.links["trunk"] && control_trunk) {
         let p = pointer_target.position;
