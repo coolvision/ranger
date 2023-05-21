@@ -73,18 +73,11 @@ async function init() {
         a1_robot.feet_walk_targets[j].position.copy(p);
     }
 
-
-    // world.step(eventQueue);
-    // render();
-    // pointer_target.position.set(0.0, 0.3, 0);
-
-    // pointer_target.position.set(0, 0.4, 0);
-
-
     update_fn(render)();
 }
 
 function update() {
+
     if (a1_robot.links["trunk"] && control_trunk) {
         let p = pointer_target.position;
         a1_robot.links["trunk"].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
@@ -100,12 +93,10 @@ function update() {
             a1_robot.feet_control_links[j].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
         }
     }
-
     utils.updateLinks(a1_robot);
 }
 
 renderer.render(scene, camera);
-
 
 export function render() {
     stats.begin();
@@ -113,6 +104,22 @@ export function render() {
     world.step(eventQueue);
 
     update();
+
+
+    for (let j of a1_robot.feet_links) {
+        let w = a1_robot.feet_targets[j].position.clone();
+        let p = a1_robot.links["trunk"].m.worldToLocal(w);
+        let p2 = a1_robot.feet_walk_targets[j].position;
+        let d = p.distanceTo(p2);
+        if (d > 0.2) {
+            a1_robot.feet_walk_targets[j].material.color = new THREE.Color(0xff0000);
+            a1_robot.feet_walk_targets[j].getWorldPosition(w);
+            a1_robot.feet_targets[j].position.copy(w);
+        } else {
+            a1_robot.feet_walk_targets[j].material.color = new THREE.Color(0xffffff);
+        }
+    }
+
 
     renderer.render(scene, camera);
 
