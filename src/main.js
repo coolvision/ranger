@@ -51,20 +51,40 @@ async function init() {
 
     env_setup();
 
-    a1_robot = await load_a1(pointer_target.position, scene, world);
+    a1_robot = await load_a1(pointer_target.position, scene, world, eventQueue);
 
     console.log("a1_robot", a1_robot)
+
+    pointer_target.position.set(-0.1, 0.3, 0);
+    update();
+    world.step(eventQueue);
+    pointer_target.position.set(0.0, 0.3, 0);
+    for (let j of a1_robot.feet_links) {
+        a1_robot.feet_targets[j].position.y = 0;
+    }
+    for (let i = 0; i < 5; i++) {
+        update();
+        world.step(eventQueue);
+    }
+
+    for (let j of a1_robot.feet_links) {
+        let w = a1_robot.feet_targets[j].position.clone();
+        let p = a1_robot.links["trunk"].m.worldToLocal(w);
+        a1_robot.feet_walk_targets[j].position.copy(p);
+    }
+
+
+    // world.step(eventQueue);
+    // render();
+    // pointer_target.position.set(0.0, 0.3, 0);
+
+    // pointer_target.position.set(0, 0.4, 0);
+
 
     update_fn(render)();
 }
 
-export function render() {
-    stats.begin();
-
-    world.step(eventQueue);
-
-    pointer_target.position.x += 0.001;
-
+function update() {
     if (a1_robot.links["trunk"] && control_trunk) {
         let p = pointer_target.position;
         a1_robot.links["trunk"].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
@@ -72,16 +92,27 @@ export function render() {
         a1_robot.links["trunk"].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
     }
 
-    for (let j of a1_robot.leg_links) {
-        if (a1_robot.leg_targets[j]) {
-            let p = a1_robot.leg_targets[j].position;
-            a1_robot.control_links[j].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-            let q = a1_robot.leg_targets[j].quaternion;
-            a1_robot.control_links[j].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+    for (let j of a1_robot.feet_links) {
+        if (a1_robot.feet_targets[j]) {
+            let p = a1_robot.feet_targets[j].position;
+            a1_robot.feet_control_links[j].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
+            let q = a1_robot.feet_targets[j].quaternion;
+            a1_robot.feet_control_links[j].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
         }
     }
 
     utils.updateLinks(a1_robot);
+}
+
+renderer.render(scene, camera);
+
+
+export function render() {
+    stats.begin();
+
+    world.step(eventQueue);
+
+    update();
 
     renderer.render(scene, camera);
 

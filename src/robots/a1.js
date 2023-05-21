@@ -5,15 +5,16 @@ import * as utils from '../rapier_utils.js'
 import { camera, scene, renderer, add_controls } from '../setup.js'
 import RAPIER from '../../lib/rapier.es';
 
-export async function load_a1(position, scene, world) {
+export async function load_a1(position, scene, world, eventQueue) {
 
     let r = {
         links: {},
         joints: {},
-        leg_targets: {},
-        leg_controls: {},
-        leg_links: ["FL_foot", "FR_foot", "RL_foot", "RR_foot"],
-        control_links: {}
+        feet_targets: {},
+        feet_controls: {},
+        feet_links: ["FL_foot", "FR_foot", "RL_foot", "RR_foot"],
+        feet_control_links: {},
+        feet_walk_targets: {}
     };
 
     const loader = new URDFLoader();
@@ -60,10 +61,14 @@ export async function load_a1(position, scene, world) {
 
             if (i == "trunk") {
                 r.links[i] = utils.addLink("position", c, world, scene, p, q);
+                // r.links[i].r.setGravityScale(0);
             } else {
                 r.links[i] = utils.addLink("dynamic", c, world, scene, p, q);
+                // r.links[i].r.setGravityScale(1);
             }
             r.links[i].v = v;
+
+
 
         }
     }
@@ -72,23 +77,41 @@ export async function load_a1(position, scene, world) {
         addJoint(world, urdf, r, j);
     }
 
-    // for (let j of r.leg_links) {
-    //
-    //     r.leg_targets[j] = new THREE.Mesh();
-    //     scene.add(r.leg_targets[j]);
-    //     r.leg_targets[j].position.copy(r.links[j].m.position);
-    //     r.leg_targets[j].quaternion.copy(r.links[j].m.quaternion);
-    //     r.leg_controls[j] = add_controls(camera, renderer, scene, r.leg_targets[j]);
-    //
-    //     let body_desc = RAPIER.RigidBodyDesc.kinematicPositionBased();
-    //     let rigid_body = world.createRigidBody(body_desc);
-    //     r.control_links[j] = {
-    //         r: rigid_body
-    //     }
-    //
-    //     world.createImpulseJoint(RAPIER.JointData.spherical({x: 0, y: 0, z: 0},
-    //          {x: 0, y: 0, z: 0}), r.links[j].r, rigid_body, true);
-    // }
+    for (let j of r.feet_links) {
+
+        r.feet_targets[j] = new THREE.Mesh();
+        scene.add(r.feet_targets[j]);
+        r.feet_targets[j].position.copy(r.links[j].m.position);
+        r.feet_targets[j].quaternion.copy(r.links[j].m.quaternion);
+        r.feet_controls[j] = add_controls(camera, renderer, scene, r.feet_targets[j]);
+
+        r.feet_walk_targets[j] = new THREE.Mesh();
+        r.feet_walk_targets[j].geometry = new THREE.SphereGeometry(0.01, 30, 30);
+        r.feet_walk_targets[j].material = new THREE.MeshLambertMaterial();
+        r.links["trunk"].m.add(r.feet_walk_targets[j]);
+        r.feet_walk_targets[j].position.copy(r.links[j].m.position);
+        r.feet_walk_targets[j].quaternion.copy(r.links[j].m.quaternion);
+
+        let body_desc = RAPIER.RigidBodyDesc.kinematicPositionBased();
+        let rigid_body = world.createRigidBody(body_desc);
+        r.feet_control_links[j] = {
+            r: rigid_body
+        }
+
+        world.createImpulseJoint(RAPIER.JointData.spherical({x: 0, y: 0, z: 0},
+             {x: 0, y: 0, z: 0}), r.links[j].r, rigid_body, true);
+    }
+
+
+
+
+    // world.step(eventQueue);
+    // world.step(eventQueue);
+    // world.step(eventQueue);
+    // world.step(eventQueue);
+
+
+
 
     return r;
 }
@@ -113,7 +136,7 @@ function addJoint(world, urdf, r, j) {
             {x: 0, y: 0, z: 0},
             {w: 1.0, x: 0.0, y: 0.0, z: 0.0});
 
-        joint = world.createMultibodyJoint(params, parent_link.r, child_link.r, true);
+        joint = world.createImpulseJoint(params, parent_link.r, child_link.r, true);
         joint.setContactsEnabled(false);
     }
 
@@ -124,15 +147,31 @@ function addJoint(world, urdf, r, j) {
             {x: a.x, y: a.y, z: a.z});
         let l1 = urdf.joints[j].limit.lower;
         let l2 = urdf.joints[j].limit.upper;
-        params.limitsEnabled = true;
-        params.limits = [l1, l2];
+
+        // let l1 = -2.69;
+        // let l2 = -2.69;
+
+
+        // params.limitsEnabled = true;
+        // params.limits = [l1, l2];
+        // params.limits = [0, 0.5];
+
 
         if (j.includes("hip")) {
             joint = world.createImpulseJoint(params, parent_link.r, child_link.r, true);
         } else {
+            // joint = world.createImpulseJoint(params, parent_link.r, child_link.r, true);
             joint = world.createMultibodyJoint(params, parent_link.r, child_link.r, true);
         }
         joint.setContactsEnabled(false);
+
+        // if (j.includes("calf_joint")) {
+        //     joint.configureMotorPosition(0.5, 100000, 100);
+        // }
+         // else {
+           // joint.configureMotorPosition(0, 100000, 100);
+        // }
+
     }
 
     r.joints[j] = joint;
