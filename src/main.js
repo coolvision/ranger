@@ -55,17 +55,18 @@ async function init() {
 
     console.log("a1_robot", a1_robot)
 
-    pointer_target.position.set(-0.1, 0.3, 0);
+    pointer_target.position.set(-0.1, 0.3, 1);
     update();
     world.step(eventQueue);
-    pointer_target.position.set(0.0, 0.3, 0);
-    for (let j of a1_robot.feet_links) {
-        a1_robot.feet_targets[j].position.y = 0;
-    }
-    for (let i = 0; i < 5; i++) {
-        update();
-        world.step(eventQueue);
-    }
+    pointer_target.position.set(0.0, 0.3, 1);
+    // for (let j of a1_robot.feet_links) {
+    //     a1_robot.feet_targets[j].position.y = 0;
+    //     a1_robot.feet_targets[j].position.z += 1;
+    // }
+    // for (let i = 0; i < 5; i++) {
+    //     update();
+    //     world.step(eventQueue);
+    // }
 
     for (let j of a1_robot.feet_links) {
         let w = a1_robot.feet_targets[j].position.clone();
@@ -93,7 +94,27 @@ function update() {
             a1_robot.feet_control_links[j].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
         }
     }
-    utils.updateLinks(a1_robot);
+
+    for (let j in a1_robot.joints) {
+
+        if (j == "FR_calf_joint") {
+            console.log("FR_calf_joint",  a1_robot.joints[j].link1, a1_robot.joints[j].link2)
+        }
+
+        // let q1 = a1_robot.joints[j].link1.m.quaternion;
+        // let q2 = a1_robot.joints[j].link2.m.quaternion;
+        // let a = q2.angleTo(q1);
+        // // console.log("joint", j, q1.angleTo(q2), a1_robot.joints[j], a1_robot.sim_joints[j]);
+        // if (a1_robot.sim_joints[j].mimic) {
+        //     a1_robot.sim_joints[j].configureMotorPosition(a, 10, 1);
+        // }
+    }
+
+
+    // utils.updateLinks(a1_robot);
+
+    utils.updateLinks(a1_robot.links);
+    utils.updateLinks(a1_robot.sim_links);
 }
 
 renderer.render(scene, camera);
@@ -105,7 +126,6 @@ export function render() {
 
     update();
 
-
     for (let j of a1_robot.feet_links) {
         let w = a1_robot.feet_targets[j].position.clone();
         let p = a1_robot.links["trunk"].m.worldToLocal(w);
@@ -114,12 +134,12 @@ export function render() {
         if (d > 0.2) {
             a1_robot.feet_walk_targets[j].material.color = new THREE.Color(0xff0000);
             a1_robot.feet_walk_targets[j].getWorldPosition(w);
+            if (w.y < 0) w.y = 0;
             a1_robot.feet_targets[j].position.copy(w);
         } else {
             a1_robot.feet_walk_targets[j].material.color = new THREE.Color(0xffffff);
         }
     }
-
 
     renderer.render(scene, camera);
 

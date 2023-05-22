@@ -14,7 +14,9 @@ export async function load_a1(position, scene, world, eventQueue) {
         feet_controls: {},
         feet_links: ["FL_foot", "FR_foot", "RL_foot", "RR_foot"],
         feet_control_links: {},
-        feet_walk_targets: {}
+        feet_walk_targets: {},
+        sim_links: {},
+        sim_joints: {}
     };
 
     const loader = new URDFLoader();
@@ -58,18 +60,23 @@ export async function load_a1(position, scene, world, eventQueue) {
 
             p.copy(u.position);
             q.copy(u.quaternion);
+            let p2 = p.clone();
+            // p2.y -= 1;
+            let q2 = q.clone();
 
             if (i == "trunk") {
-                r.links[i] = utils.addLink("position", c, world, scene, p, q);
+                r.links[i] = utils.addLink("position", c, world, scene, p, q, 0x00010001);
                 // r.links[i].r.setGravityScale(0);
             } else {
-                r.links[i] = utils.addLink("dynamic", c, world, scene, p, q);
+                r.links[i] = utils.addLink("dynamic", c, world, scene, p, q, 0x00010001);
                 // r.links[i].r.setGravityScale(1);
             }
-            r.links[i].v = v;
+            // r.links[i].v = v;
 
+            r.sim_links[i] = utils.addLink("dynamic", c, world, scene, p2, q2, 0x00020002);
+            // r.sim_links[i].v = v;
 
-
+            c.visible = false;
         }
     }
 
@@ -123,13 +130,17 @@ function addJoint(world, urdf, r, j) {
 
     let child_link = r.links[child_name];
     let parent_link = r.links[parent_name];
+
+    let sim_child_link = r.sim_links[child_name];
+    let sim_parent_link = r.sim_links[parent_name];
+
     let p = urdf.joints[j].position;
     let a = urdf.joints[j].axis;
 
     let joint;
+    let sim_joint;
 
     if (j.includes("foot") && urdf.joints[j]._jointType == "fixed") {
-    // //
         let params = RAPIER.JointData.fixed(
             {x: p.x, y: p.y, z: p.z},
             {w: 1.0, x: 0.0, y: 0.0, z: 0.0},
@@ -138,11 +149,18 @@ function addJoint(world, urdf, r, j) {
 
         joint = world.createImpulseJoint(params, parent_link.r, child_link.r, true);
         joint.setContactsEnabled(false);
+        joint.link1 = parent_link;
+        joint.link2 = child_link;
+
+        sim_joint = world.createImpulseJoint(params, sim_parent_link.r, sim_child_link.r, true);
+        sim_joint.setContactsEnabled(false);
+        sim_joint.mimic = false;
     }
 
     if (urdf.joints[j]._jointType == "revolute") {
 
-        let params = RAPIER.JointData.revolute({x: p.x, y: p.y, z: p.z},
+        let params = RAPIER.JointData.revolute(
+            {x: p.x, y: p.y, z: p.z},
             {x: 0, y: 0, z: 0},
             {x: a.x, y: a.y, z: a.z});
         let l1 = urdf.joints[j].limit.lower;
@@ -150,12 +168,9 @@ function addJoint(world, urdf, r, j) {
 
         // let l1 = -2.69;
         // let l2 = -2.69;
-
-
         // params.limitsEnabled = true;
         // params.limits = [l1, l2];
         // params.limits = [0, 0.5];
-
 
         if (j.includes("hip")) {
             joint = world.createImpulseJoint(params, parent_link.r, child_link.r, true);
@@ -164,7 +179,14 @@ function addJoint(world, urdf, r, j) {
             joint = world.createMultibodyJoint(params, parent_link.r, child_link.r, true);
         }
         joint.setContactsEnabled(false);
+        joint.link1 = parent_link;
+        joint.link2 = child_link;
 
+
+        sim_joint = world.createMultibodyJoint(params, sim_parent_link.r, sim_child_link.r, true);
+        sim_joint.setContactsEnabled(false);
+        sim_joint.configureMotorPosition(0, 10, 1);
+        sim_joint.mimic = true;
         // if (j.includes("calf_joint")) {
         //     joint.configureMotorPosition(0.5, 100000, 100);
         // }
@@ -175,4 +197,5 @@ function addJoint(world, urdf, r, j) {
     }
 
     r.joints[j] = joint;
+    r.sim_joints[j] = sim_joint;
 }

@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import RAPIER from '../lib/rapier.es';
 // import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
 
-export function addLink(type, c, world, scene, p, q) {
+export function addLink(type, c_in, world, scene, p, q, collision_groups = 0xffffffff) {
 
     let body_desc;
     if (type == "position") {
@@ -15,6 +15,10 @@ export function addLink(type, c, world, scene, p, q) {
     body_desc.setCanSleep(false);
 
     let rigid_body = world.createRigidBody(body_desc);
+
+    // console.log("addLink", c)
+    let c = c_in.clone();
+    c.parent = c_in.parent;
 
     let link = c.parent.parent;
     let p1 = new THREE.Vector3();
@@ -29,8 +33,8 @@ export function addLink(type, c, world, scene, p, q) {
     rigid_body.setTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
     rigid_body.setRotation({w: q1.w, x: q1.x, y: q1.y, z: q1.z}, true);
 
-    // rigid_body.setAngularDamping(100);
-    // rigid_body.setLinearDamping(100);
+    rigid_body.setAngularDamping(100);
+    rigid_body.setLinearDamping(100);
 
     let collider_desc;
     let params = c.geometry.parameters;
@@ -56,12 +60,14 @@ export function addLink(type, c, world, scene, p, q) {
         // collider_desc =
             // RAPIER.ColliderDesc.convexHull(c.geometry.attributes.position.array);
     }
+    collider_desc.setCollisionGroups(collision_groups);
 
     let collider = world.createCollider(collider_desc, rigid_body);
 
     c.material = new THREE.MeshLambertMaterial({color: 0x333333});
     // c.material.transparent = true;
     // c.material.opacity = 0.2;
+    c.geometry = c_in.geometry.clone();
     c.geometry.applyQuaternion(q);
     c.geometry.translate(p.x, p.y, p.z);
 
@@ -75,42 +81,42 @@ export function addLink(type, c, world, scene, p, q) {
     }
 }
 
-export function updateLinks(r) {
+export function updateLinks(links) {
 
-    for (let i in r.links) {
+    for (let i in links) {
         // if (this.parts[i].c.attached) continue;
 
-        r.links[i].r.wakeUp();
+        links[i].r.wakeUp();
 
-        let q = r.links[i].r.rotation();
+        let q = links[i].r.rotation();
         let q1 = new THREE.Quaternion();
         q1.set(q.x, q.y, q.z, q.w);
 
-        let p = r.links[i].r.translation();
+        let p = links[i].r.translation();
         let p1 = new THREE.Vector3();
         p1.set(p.x, p.y, p.z);
 
         let m_body = new THREE.Matrix4();
         m_body.compose(p1, q1, new THREE.Vector3(1, 1, 1));
 
-        let m_parent = r.links[i].m.parent.matrixWorld.clone();
+        let m_parent = links[i].m.parent.matrixWorld.clone();
         m_parent.invert();
         m_parent.multiply(m_body);
 
-        r.links[i].m.position.set(0, 0, 0);
-        r.links[i].m.quaternion.set(0, 0, 0, 1);
-        r.links[i].m.scale.copy(r.links[i].scale);
-        r.links[i].m.applyMatrix4(m_parent);
-        r.links[i].m.updateWorldMatrix(true, true);
+        links[i].m.position.set(0, 0, 0);
+        links[i].m.quaternion.set(0, 0, 0, 1);
+        links[i].m.scale.copy(links[i].scale);
+        links[i].m.applyMatrix4(m_parent);
+        links[i].m.updateWorldMatrix(true, true);
 
-        if (r.links[i].v) {
+        if (links[i].v) {
             let pw = new THREE.Vector3();
-            r.links[i].m.getWorldPosition(pw);
+            links[i].m.getWorldPosition(pw);
             let qw = new THREE.Quaternion();
-            r.links[i].m.getWorldQuaternion(qw);
+            links[i].m.getWorldQuaternion(qw);
 
-            r.links[i].v.position.copy(pw);
-            r.links[i].v.quaternion.copy(qw);
+            links[i].v.position.copy(pw);
+            links[i].v.quaternion.copy(qw);
         }
     }
 }
