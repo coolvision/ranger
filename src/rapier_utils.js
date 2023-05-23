@@ -109,15 +109,14 @@ export function updateLinks(links) {
         links[i].m.applyMatrix4(m_parent);
         links[i].m.updateWorldMatrix(true, true);
 
-        if (links[i].v) {
-            let pw = new THREE.Vector3();
-            links[i].m.getWorldPosition(pw);
-            let qw = new THREE.Quaternion();
-            links[i].m.getWorldQuaternion(qw);
-
-            links[i].v.position.copy(pw);
-            links[i].v.quaternion.copy(qw);
-        }
+        // if (links[i].v) {
+        //     let pw = new THREE.Vector3();
+        //     links[i].m.getWorldPosition(pw);
+        //     let qw = new THREE.Quaternion();
+        //     links[i].m.getWorldQuaternion(qw);
+        //     links[i].v.position.copy(pw);
+        //     links[i].v.quaternion.copy(qw);
+        // }
     }
 }
 

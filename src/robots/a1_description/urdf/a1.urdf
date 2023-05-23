@@ -63,6 +63,8 @@
     <dynamics damping="0.01" friction="0.2"/>
     <limit effort="33.5" lower="-1.0471975512" upper="4.18879020479" velocity="21"/>
   </joint>
+
+
   <link name="FR_thigh">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -83,6 +85,7 @@
       <inertia ixx="0.005529065" ixy="-4.825e-06" ixz="0.000343869" iyy="0.005139339" iyz="-2.2448e-05" izz="0.001367788"/>
     </inertial>
   </link>
+
   <joint name="FR_calf_joint" type="revolute">
     <origin rpy="0 0 0" xyz="0 0 -0.2"/>
     <parent link="FR_thigh"/>
@@ -91,6 +94,7 @@
     <dynamics damping="0.01" friction="0.2"/>
     <limit effort="33.5" lower="-2.69653369433" upper="-0.916297857297" velocity="21"/>
   </joint>
+  
   <link name="FR_calf">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -111,6 +115,8 @@
       <inertia ixx="0.002997972" ixy="0.0" ixz="-0.000141163" iyy="0.003014022" iyz="0.0" izz="3.2426e-05"/>
     </inertial>
   </link>
+
+
   <joint name="FR_foot_fixed" type="fixed">
     <origin rpy="0 0 0" xyz="0 0 -0.2"/>
     <parent link="FR_calf"/>

@@ -74,6 +74,24 @@ async function init() {
         a1_robot.feet_walk_targets[j].position.copy(p);
     }
 
+    for (let j in a1_robot.joints) {
+
+        if (j == "FR_calf_joint") {
+
+            let m1 = a1_robot.joints[j].link1.m;
+            let m2 = a1_robot.joints[j].link2.m;
+
+            let e1 = new THREE.Euler();
+            e1.setFromRotationMatrix(m1.matrixWorld);
+
+            let e2 = new THREE.Euler();
+            e2.setFromRotationMatrix(m2.matrixWorld);
+
+            console.log("FR_calf_joint", e1, e2)
+        }
+    }
+
+
     update_fn(render)();
 }
 
@@ -95,11 +113,54 @@ function update() {
         }
     }
 
+    // utils.updateLinks(a1_robot);
+
+    utils.updateLinks(a1_robot.links);
+    utils.updateLinks(a1_robot.sim_links);
+
+
+
     for (let j in a1_robot.joints) {
 
-        if (j == "FR_calf_joint") {
-            console.log("FR_calf_joint",  a1_robot.joints[j].link1, a1_robot.joints[j].link2)
-        }
+        // if (j == "FR_calf_joint") {
+            // console.log("FR_calf_joint",  a1_robot.joints[j].link1, a1_robot.joints[j].link2);
+        // if (j.includes("calf_joint")) {
+        if (1) {
+
+            let m1 = a1_robot.joints[j].link1.m;
+            let m2 = a1_robot.joints[j].link2.m;
+
+            let m_child = a1_robot.joints[j].link2.m.matrixWorld.clone();
+            let m_parent = a1_robot.joints[j].link1.m.matrixWorld.clone();
+            m_parent.invert();
+            m_parent.multiply(m_child);
+
+            let q = new THREE.Quaternion();
+            q.setFromRotationMatrix(m_parent);
+
+            let angle = 2 * Math.acos(q.w);
+            let s = 1;
+            if (1 - q.w * q.w > 0.000001) {
+                s = Math.sqrt(1 - q.w * q.w);
+            }
+            let axis = new THREE.Vector3(q.x/s, q.y/s, q.z/s);
+
+            if (Math.abs(axis.y) > 0.5) {
+                if (axis.y < 0) angle = -angle;
+            } else if (Math.abs(axis.x) > 0.5) {
+                if (axis.x < 0) angle = -angle;
+            } else if (Math.abs(axis.z) > 0.5) {
+                if (axis.z < 0) angle = -angle;
+            }
+            if (angle > Math.PI) angle -= Math.PI*2;
+
+            console.log(j, THREE.MathUtils.radToDeg(angle), axis.x, axis.y, axis.z)
+
+            // if (a1_robot.sim_joints[j].mimic)
+            //     a1_robot.sim_joints[j].configureMotorPosition(angle, 1000, 10);
+
+            // console.log("FR_calf_joint", e1.x, e1.y, e1.z)
+        // }
 
         // let q1 = a1_robot.joints[j].link1.m.quaternion;
         // let q2 = a1_robot.joints[j].link2.m.quaternion;
@@ -107,14 +168,8 @@ function update() {
         // // console.log("joint", j, q1.angleTo(q2), a1_robot.joints[j], a1_robot.sim_joints[j]);
         // if (a1_robot.sim_joints[j].mimic) {
         //     a1_robot.sim_joints[j].configureMotorPosition(a, 10, 1);
-        // }
+        }
     }
-
-
-    // utils.updateLinks(a1_robot);
-
-    utils.updateLinks(a1_robot.links);
-    utils.updateLinks(a1_robot.sim_links);
 }
 
 renderer.render(scene, camera);
@@ -158,6 +213,12 @@ window.addEventListener('keydown', function(event) {
             break;
         case "KeyZ":
             world.step(eventQueue);
+            break;
+        case "KeyT":
+            transform_ctrl.setMode('translate');
+            break;
+        case "KeyR":
+            transform_ctrl.setMode('rotate');
             break;
     }
 });
