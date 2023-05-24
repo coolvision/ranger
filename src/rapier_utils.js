@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import RAPIER from '../lib/rapier.es';
 // import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat';
 
-export function addLink(type, c_in, world, scene, p, q, collision_groups = 0xffffffff) {
+export function addLink(type, c_in, world, scene, p, q, collision_groups = 0xffffffff, mass = null) {
 
     let body_desc;
     if (type == "position") {
@@ -33,8 +33,8 @@ export function addLink(type, c_in, world, scene, p, q, collision_groups = 0xfff
     rigid_body.setTranslation({x: p1.x, y: p1.y, z: p1.z}, true);
     rigid_body.setRotation({w: q1.w, x: q1.x, y: q1.y, z: q1.z}, true);
 
-    rigid_body.setAngularDamping(100);
-    rigid_body.setLinearDamping(100);
+    // rigid_body.setAngularDamping(100);
+    // rigid_body.setLinearDamping(100);
 
     let collider_desc;
     let params = c.geometry.parameters;
@@ -62,11 +62,16 @@ export function addLink(type, c_in, world, scene, p, q, collision_groups = 0xfff
     }
     collider_desc.setCollisionGroups(collision_groups);
 
+    if (mass) {
+        console.log("setMass", mass);
+        // collider_desc.setMass(mass);
+    }
+
     let collider = world.createCollider(collider_desc, rigid_body);
 
     c.material = new THREE.MeshLambertMaterial({color: 0x333333});
-    // c.material.transparent = true;
-    // c.material.opacity = 0.2;
+    c.material.transparent = true;
+    c.material.opacity = 0.75;
     c.geometry = c_in.geometry.clone();
     c.geometry.applyQuaternion(q);
     c.geometry.translate(p.x, p.y, p.z);
@@ -109,14 +114,14 @@ export function updateLinks(links) {
         links[i].m.applyMatrix4(m_parent);
         links[i].m.updateWorldMatrix(true, true);
 
-        // if (links[i].v) {
-        //     let pw = new THREE.Vector3();
-        //     links[i].m.getWorldPosition(pw);
-        //     let qw = new THREE.Quaternion();
-        //     links[i].m.getWorldQuaternion(qw);
-        //     links[i].v.position.copy(pw);
-        //     links[i].v.quaternion.copy(qw);
-        // }
+        if (links[i].v) {
+            let pw = new THREE.Vector3();
+            links[i].m.getWorldPosition(pw);
+            let qw = new THREE.Quaternion();
+            links[i].m.getWorldQuaternion(qw);
+            links[i].v.position.copy(pw);
+            links[i].v.quaternion.copy(qw);
+        }
     }
 }
 

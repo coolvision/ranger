@@ -13,6 +13,7 @@ export async function load_a1(position, scene, world, eventQueue) {
         feet_targets: {},
         feet_controls: {},
         feet_links: ["FL_foot", "FR_foot", "RL_foot", "RR_foot"],
+        //feet_links: [],
         feet_control_links: {},
         feet_walk_targets: {},
         sim_links: {},
@@ -25,7 +26,7 @@ export async function load_a1(position, scene, world, eventQueue) {
         'a1_description' : '/src/robots/a1_description'            // The equivalent of a (list of) ROS package(s):// directory
     };
     loader.parseCollision = true;
-    loader.parseVisual = false;
+    loader.parseVisual = true;
     urdf = await loader.loadAsync('/src/robots/a1_description/urdf/a1.urdf');
 
     urdf.position.copy(position);
@@ -61,7 +62,6 @@ export async function load_a1(position, scene, world, eventQueue) {
             p.copy(u.position);
             q.copy(u.quaternion);
             let p2 = p.clone();
-            // p2.y -= 1;
             let q2 = q.clone();
 
             if (i == "trunk") {
@@ -71,10 +71,12 @@ export async function load_a1(position, scene, world, eventQueue) {
                 r.links[i] = utils.addLink("dynamic", c, world, scene, p, q, 0x00010001);
                 // r.links[i].r.setGravityScale(1);
             }
+            scene.add(v);
             // r.links[i].v = v;
 
-            r.sim_links[i] = utils.addLink("dynamic", c, world, scene, p2, q2, 0x00020002);
-            // r.sim_links[i].v = v;
+            r.sim_links[i] = utils.addLink("dynamic", c, world, scene, p2, q2, 0x00020002, u.mass);
+            r.sim_links[i].r.setAdditionalMass(0.5);
+            r.sim_links[i].v = v;
 
             c.visible = false;
         }
@@ -152,9 +154,11 @@ function addJoint(world, urdf, r, j) {
         joint.link1 = parent_link;
         joint.link2 = child_link;
 
-        sim_joint = world.createImpulseJoint(params, sim_parent_link.r, sim_child_link.r, true);
+        sim_joint = world.createMultibodyJoint(params, sim_parent_link.r, sim_child_link.r, true);
         sim_joint.setContactsEnabled(false);
         sim_joint.mimic = false;
+
+        r.sim_joints[j] = sim_joint;
     }
 
     if (urdf.joints[j]._jointType == "revolute") {
@@ -185,17 +189,22 @@ function addJoint(world, urdf, r, j) {
 
         sim_joint = world.createMultibodyJoint(params, sim_parent_link.r, sim_child_link.r, true);
         sim_joint.setContactsEnabled(false);
-        sim_joint.configureMotorPosition(0, 10, 1);
-        sim_joint.mimic = true;
+        // sim_joint.configureMotorPosition(0, 10, 1);
+        sim_joint.mimic = true
+
+        // sim_joint.configureMotorVelocity(1.0, 0.5);
+        sim_joint.configureMotorPosition(0, 100, 0.5);
         // if (j.includes("calf_joint")) {
-        //     joint.configureMotorPosition(0.5, 100000, 100);
+        //     sim_joint.configureMotorPosition(0.5, 1000, 1);
         // }
-         // else {
-           // joint.configureMotorPosition(0, 100000, 100);
+        //  else {
+        //    sim_joint.configureMotorPosition(0, 1000, 1);
         // }
+
+        r.sim_joints[j] = sim_joint;
 
     }
 
     r.joints[j] = joint;
-    r.sim_joints[j] = sim_joint;
+
 }

@@ -16,6 +16,7 @@ let ground_collider;
 let boxes = [];
 
 let control_trunk = true;
+let set_joints = false;
 
 let socket;
 let motion_task = {
@@ -36,16 +37,18 @@ async function init() {
     world = new RAPIER.World(gravity);
     eventQueue = new RAPIER.EventQueue(true);
     let ip = world.integrationParameters;
-    ip.erp = 0.8;
-    ip.maxStabilizationIterations = 10;
+    // ip.erp = 0.8;
+    // ip.maxStabilizationIterations = 10;
 
     let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 1, 10.0);
     groundColliderDesc.setTranslation(0, -1, 0);
     ground_collider = world.createCollider(groundColliderDesc);
     ground_collider.ignore_controller = true;
+    // ground_collider.setCollisionGroups(0x00020002);
+
 
     scene.add(pointer_target);
-    pointer_target.position.set(0, 0.5, 0);
+    pointer_target.position.set(0, 0.3, 0);
     pointer_target.rotateX(-Math.PI/2);
     transform_ctrl = add_controls(camera, renderer, scene, pointer_target);
 
@@ -55,14 +58,15 @@ async function init() {
 
     console.log("a1_robot", a1_robot)
 
-    pointer_target.position.set(-0.1, 0.3, 1);
-    update();
-    world.step(eventQueue);
-    pointer_target.position.set(0.0, 0.3, 1);
-    // for (let j of a1_robot.feet_links) {
-    //     a1_robot.feet_targets[j].position.y = 0;
-    //     a1_robot.feet_targets[j].position.z += 1;
-    // }
+    // pointer_target.position.set(-0.1, 0.3, 0);
+    // update();
+    // world.step(eventQueue);
+    // pointer_target.position.set(0.0, 0.3, 0);
+
+    for (let j of a1_robot.feet_links) {
+        a1_robot.feet_targets[j].position.y = 0;
+        // a1_robot.feet_targets[j].position.z += 1;
+    }
     // for (let i = 0; i < 5; i++) {
     //     update();
     //     world.step(eventQueue);
@@ -73,24 +77,6 @@ async function init() {
         let p = a1_robot.links["trunk"].m.worldToLocal(w);
         a1_robot.feet_walk_targets[j].position.copy(p);
     }
-
-    for (let j in a1_robot.joints) {
-
-        if (j == "FR_calf_joint") {
-
-            let m1 = a1_robot.joints[j].link1.m;
-            let m2 = a1_robot.joints[j].link2.m;
-
-            let e1 = new THREE.Euler();
-            e1.setFromRotationMatrix(m1.matrixWorld);
-
-            let e2 = new THREE.Euler();
-            e2.setFromRotationMatrix(m2.matrixWorld);
-
-            console.log("FR_calf_joint", e1, e2)
-        }
-    }
-
 
     update_fn(render)();
 }
@@ -108,8 +94,8 @@ function update() {
         if (a1_robot.feet_targets[j]) {
             let p = a1_robot.feet_targets[j].position;
             a1_robot.feet_control_links[j].r.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z}, true);
-            let q = a1_robot.feet_targets[j].quaternion;
-            a1_robot.feet_control_links[j].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
+            // let q = a1_robot.feet_targets[j].quaternion;
+            // a1_robot.feet_control_links[j].r.setNextKinematicRotation({w: q.w, x: q.x, y: q.y, z: q.z}, true);
         }
     }
 
@@ -119,13 +105,16 @@ function update() {
     utils.updateLinks(a1_robot.sim_links);
 
 
-
+    if (set_joints)
     for (let j in a1_robot.joints) {
 
         // if (j == "FR_calf_joint") {
             // console.log("FR_calf_joint",  a1_robot.joints[j].link1, a1_robot.joints[j].link2);
-        // if (j.includes("calf_joint")) {
+        // if (j.includes("FL_calf_joint") || j.includes("thigh_joint")) {
         if (1) {
+
+        // if (j.includes("hip_joint")) continue;
+
 
             let m1 = a1_robot.joints[j].link1.m;
             let m2 = a1_robot.joints[j].link2.m;
@@ -149,15 +138,22 @@ function update() {
                 if (axis.y < 0) angle = -angle;
             } else if (Math.abs(axis.x) > 0.5) {
                 if (axis.x < 0) angle = -angle;
-            } else if (Math.abs(axis.z) > 0.5) {
-                if (axis.z < 0) angle = -angle;
             }
+             // else if (Math.abs(axis.z) > 0.5) {
+                // if (axis.z < 0) angle = -angle;
+            // }
             if (angle > Math.PI) angle -= Math.PI*2;
 
-            console.log(j, THREE.MathUtils.radToDeg(angle), axis.x, axis.y, axis.z)
+            // if (j.includes("RR_calf_joint"))
+            //     console.log(j, THREE.MathUtils.radToDeg(angle))
 
-            // if (a1_robot.sim_joints[j].mimic)
-            //     a1_robot.sim_joints[j].configureMotorPosition(angle, 1000, 10);
+            if (a1_robot.sim_joints[j] && a1_robot.sim_joints[j].mimic) {
+                // console.log(j, THREE.MathUtils.radToDeg(angle), q.w);
+                if (!isNaN(angle)) {
+                    a1_robot.sim_joints[j].configureMotorPosition(angle, 100, 10);
+                }
+                // a1_robot.sim_joints[j].configureMotorModel(0);
+            }
 
             // console.log("FR_calf_joint", e1.x, e1.y, e1.z)
         // }
@@ -219,6 +215,9 @@ window.addEventListener('keydown', function(event) {
             break;
         case "KeyR":
             transform_ctrl.setMode('rotate');
+            break;
+        case "KeyS":
+            set_joints = !set_joints;
             break;
     }
 });
